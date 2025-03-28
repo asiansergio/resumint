@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "fs";
-import { compile } from "handlebars";
+import pkg from "handlebars";
 import { launch } from "puppeteer";
 
 export const getCurrentDate = () => {
@@ -14,7 +14,7 @@ export const getCurrentDate = () => {
 export const generateHTML = (data, language, templatePath) => {
   try {
     const templateSource = readFileSync(templatePath, "utf8");
-    const template = compile(templateSource);
+    const template = pkg.compile(templateSource);
 
     return template({
       ...data,

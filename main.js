@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import parseArguments from "./src/cli";
-import forgeResumes from "./src/forge";
+import cli from "./src/cli.js";
+import forge from "./src/forge.js";
 
-const argv = parseArguments();
-forgeResumes(argv);
+const argv = cli.parseArguments();
+forge.forgeResumes(argv);

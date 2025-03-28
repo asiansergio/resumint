@@ -1,13 +1,13 @@
 import { readFileSync, existsSync, mkdirSync } from "fs";
 import { resolve, join } from "path";
-import registerHelpers from "./template";
+import template from "./template.js";
 import {
   getCurrentDate, generateHTML, generatePDF, saveHTML
-} from "./utils";
+} from "./utils.js";
 
 const forgeResumes = async (argv) => {
   try {
-    registerHelpers();
+    template.registerHelpers();
 
     const resumeData = JSON.parse(readFileSync(argv.data, "utf8"));
 

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{basic.name}} - {{basic.title[language]}}</title>
+    <title>{{basic.name}} - {{lookup basic.title language}}</title>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -20,7 +20,7 @@
         {{/if}}
         <div class="header-info">
           <h1 class="name">{{basic.name}}</h1>
-          <h2 class="title">{{basic.title[language]}}</h2>
+          <h2 class="title">{{lookup basic.title language}}</h2>
           <div class="contact-info">
             {{#each basic.contactInfo}}
             <div class="contact-item">
@@ -30,7 +30,7 @@
             {{/each}}
             <div class="contact-item">
               <i class="fas fa-map-marker-alt"></i>
-              <span>{{basic.location[language]}}</span>
+              <span>{{lookup basic.location language}}</span>
             </div>
           </div>
         </div>
@@ -38,17 +38,19 @@
 
       <!-- Experience section -->
       <section class="experience">
-        <h2 class="section-title">{{metadata.sections[language].experience}}</h2>
+        <h2 class="section-title">{{lookup (lookup metadata.sections language) "experience"}}</h2>
 
         {{#each experience}}
         <div class="item">
           <div class="item-header">
-            <div class="position">{{position[../language]}}</div>
+            <div class="position">{{lookup position ../language}}</div>
             <div class="company">{{company}}</div>
           </div>
           <div class="date-location">
-            <div class="location">{{location[../language]}}</div>
-            <div class="date">{{date.start[../language]}} — {{date.end[../language]}}</div>
+            <div class="location">{{lookup location ../language}}</div>
+            <div class="date">
+              {{lookup date.start ../language}} — {{lookup date.end ../language}}
+            </div>
           </div>
 
           {{#if techStack}}
@@ -56,7 +58,7 @@
           {{/if}}
 
           <ul class="responsibilities">
-            {{#each responsibilities[../language]}}
+            {{#each (lookup responsibilities ../language)}}
             <li>{{this}}</li>
             {{/each}}
           </ul>
@@ -66,37 +68,28 @@
 
       <!-- Education section -->
       <section class="education">
-        <h2 class="section-title">{{metadata.sections[language].education}}</h2>
+        <h2 class="section-title">{{lookup (lookup metadata.sections language) "education"}}</h2>
 
         {{#each education}}
         <div class="item">
           <div class="item-header">
-            <div class="position">{{institution[../language]}}</div>
+            <div class="position">{{lookup institution ../language}}</div>
             <div class="company">
-              {{degree[../language]}} {{#if status}} {{status[../language]}}{{/if}} {{#if credits}}
-              {{credits[../language]}}{{/if}} {{#if level}} {{level[../language]}}{{/if}}
+              {{lookup degree ../language}} {{#if status}} {{lookup status ../language}}{{/if}}
+              {{#if credits}} {{lookup credits ../language}}{{/if}} {{#if level}} {{lookup level
+              ../language}}{{/if}}
             </div>
           </div>
           <div class="date-location">
-            <div class="location">{{location[../language]}}</div>
+            <div class="location">{{lookup location ../language}}</div>
             <div class="date">
-              {{#if date.start}}{{date.start[../language]}} — {{/if}} {{date.end[../language]}}
+              {{#if date.start}}{{lookup date.start ../language}} — {{/if}} {{lookup date.end
+              ../language}}
             </div>
           </div>
         </div>
         {{/each}}
       </section>
     </div>
-
-    <script>
-      // Helper functions for the template
-      Handlebars.registerHelper("eq", function (a, b) {
-        return a === b;
-      });
-
-      Handlebars.registerHelper("join", function (array, separator) {
-        return array.join(separator);
-      });
-    </script>
   </body>
 </html>

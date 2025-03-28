@@ -19,6 +19,18 @@ const registerHelpers = () => {
         return "";
     }
   });
+
+  Handlebars.registerHelper("lookup", (obj, field, subfield) => {
+    if (!obj || !field) {
+      return "";
+    }
+
+    if (subfield) {
+      return obj[field][subfield];
+    }
+
+    return obj[field];
+  });
 };
 
 export default {

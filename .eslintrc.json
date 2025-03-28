@@ -13,6 +13,18 @@
     "no-console": "off",
     "comma-dangle": ["error", "never"],
     "quotes": ["error", "double"],
-    "no-use-before-define": ["error", { "functions": false }]
+    "no-use-before-define": ["error", "nofunc"],
+    "consistent-return": "off",
+    "import/extensions": [
+      "error",
+      "ignorePackages",
+      {
+        "js": "always",
+        "mjs": "always",
+        "jsx": "always",
+        "ts": "always",
+        "tsx": "always"
+      }
+    ]
   }
 }
