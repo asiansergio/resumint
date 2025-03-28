@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{language}}">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../css/styles.css">
 </head>
+
 <body>
     <div class="resume-container">
         <!-- Header with personal information -->
@@ -21,17 +23,14 @@
                     {{#each basic.contactInfo}}
                     <div class="contact-item">
                         <i class="fas 
-                            {{#if (eq type "email")}}fa-envelope{{/if}}
-                            {{#if (eq type "phone")}}fa-phone{{/if}}
-                            {{#if (eq type "github")}}fa-github{{/if}}
-                            {{#if (eq type "linkedin")}}fa-linkedin{{/if}}
-                        "></i>
+                            {{#if (eq type " email")}}fa-envelope{{/if}} {{#if (eq type "phone" )}}fa-phone{{/if}}
+                            {{#if (eq type "github" )}}fa-github{{/if}} {{#if (eq type "linkedin" )}}fa-linkedin{{/if}} "></i>
                         <span>{{value}}</span>
                     </div>
                     {{/each}}
-                    <div class="contact-item">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>{{basic.location[language]}}</span>
+                    <div class=" contact-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{basic.location[language]}}</span>
                     </div>
                 </div>
             </div>
@@ -40,7 +39,7 @@
         <!-- Experience section -->
         <section class="experience">
             <h2 class="section-title">{{metadata.sections[language].experience}}</h2>
-            
+
             {{#each experience}}
             <div class="item">
                 <div class="item-header">
@@ -51,13 +50,13 @@
                     <div class="location">{{location[../language]}}</div>
                     <div class="date">{{date.start[../language]}} — {{date.end[../language]}}</div>
                 </div>
-                
+
                 {{#if techStack}}
                 <div class="tech-stack">
                     <b>Tech Stack:</b> {{join techStack ", "}}
                 </div>
                 {{/if}}
-                
+
                 <ul class="responsibilities">
                     {{#each responsibilities[../language]}}
                     <li>{{this}}</li>
@@ -70,7 +69,7 @@
         <!-- Education section -->
         <section class="education">
             <h2 class="section-title">{{metadata.sections[language].education}}</h2>
-            
+
             {{#each education}}
             <div class="item">
                 <div class="item-header">
@@ -96,13 +95,14 @@
 
     <script>
         // Helper functions for the template
-        Handlebars.registerHelper('eq', function(a, b) {
+        Handlebars.registerHelper('eq', function (a, b) {
             return a === b;
         });
 
-        Handlebars.registerHelper('join', function(array, separator) {
+        Handlebars.registerHelper('join', function (array, separator) {
             return array.join(separator);
         });
     </script>
 </body>
+
 </html>
