@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Generate multilingual resumes from JSON data",
   "main": "main.js",
+  "type": "module",
   "bin": {
     "resumeforge": "./main.js"
   },

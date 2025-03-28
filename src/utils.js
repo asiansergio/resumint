@@ -1,14 +1,19 @@
-const getCurrentDate = () => {
+import { readFileSync, writeFileSync } from "fs";
+import { compile } from "handlebars";
+import { launch } from "puppeteer";
+
+export const getCurrentDate = () => {
   const now = new Date();
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are 0-based
-  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+  const day = String(now.getDate()).padStart(2, "0");
   return `${year}${month}${day}`;
 };
 
-const generateHTML = (data, language, templatePath) => {
+// eslint-disable-next-line consistent-return
+export const generateHTML = (data, language, templatePath) => {
   try {
-    const templateSource = readFileSync(templatePath, 'utf8');
+    const templateSource = readFileSync(templatePath, "utf8");
     const template = compile(templateSource);
 
     return template({
@@ -21,26 +26,26 @@ const generateHTML = (data, language, templatePath) => {
   }
 };
 
-const generatePDF = async (html, outputPath) => {
+export const generatePDF = async (html, outputPath) => {
   try {
     const browser = await launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
 
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.setContent(html, { waitUntil: "networkidle0" });
 
     // Set paper size to Letter by default
     await page.pdf({
       path: outputPath,
-      format: 'Letter',
+      format: "Letter",
       printBackground: true,
       margin: {
-        top: '0.5in',
-        right: '0.5in',
-        bottom: '0.5in',
-        left: '0.5in'
+        top: "0.5in",
+        right: "0.5in",
+        bottom: "0.5in",
+        left: "0.5in"
       }
     });
 
@@ -52,7 +57,7 @@ const generatePDF = async (html, outputPath) => {
   }
 };
 
-const saveHTML = (html, outputPath) => {
+export const saveHTML = (html, outputPath) => {
   try {
     writeFileSync(outputPath, html);
     console.log(`HTML saved: ${outputPath}`);
@@ -60,11 +65,4 @@ const saveHTML = (html, outputPath) => {
     console.error(`Error saving HTML: ${error.message}`);
     process.exit(1);
   }
-};
-
-export default {
-  getCurrentDate,
-  generateHTML,
-  generatePDF,
-  saveHTML
 };
