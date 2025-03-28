@@ -2,13 +2,13 @@
   "name": "resumeforge",
   "version": "1.0.0",
   "description": "Generate multilingual resumes from JSON data",
-  "main": "forge.js",
+  "main": "main.js",
   "bin": {
-    "resumeforge": "./forge.js"
+    "resumeforge": "./main.js"
   },
   "scripts": {
-    "start": "node forge.js",
-    "demo": "node forge.js --data ./data/example-data.json --html",
+    "start": "node main.js",
+    "demo": "node main.js --data ./data/example-data.json --html",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
