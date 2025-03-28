@@ -28,7 +28,7 @@
         "value": "linkedin.com/in/johndoe"
       }
     ],
-    "profileImage": "path/to/profile.jpg"
+    "profileImage": "../images/john-doe-profile-picture.png"
   },
   "experience": [
     {
