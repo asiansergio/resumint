@@ -5,16 +5,18 @@ const registerHelpers = () => {
 
   Handlebars.registerHelper("join", (array, separator) => array.join(separator));
 
-  Handlebars.registerHelper("contactIcon", (type) => {
+  Handlebars.registerHelper("getIcon", (type) => {
     switch (type) {
       case "email":
-        return "fa-envelope";
+        return "mail-outline";
       case "phone":
-        return "fa-phone";
+        return "call-outline";
       case "github":
-        return "fa-github";
+        return "logo-github";
       case "linkedin":
-        return "fa-linkedin";
+        return "logo-linkedin";
+      case "location":
+        return "location-outline";
       default:
         return "";
     }
