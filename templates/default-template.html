@@ -3,40 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{basic.name}} - {{lookup basic.title language}}</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
+    <title>{{basic.name}} - Curriculum</title>
     <link rel="stylesheet" href="../css/styles.css" />
+    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
   </head>
 
   <body>
     <div class="resume-container">
-      <!-- Header with personal information -->
       <header class="header">
         {{#if basic.profileImage}}
-        <img src="{{basic.profileImage}}" alt="{{basic.name}}" class="profile-image" />
+        <figure class="profile-figure">
+          <img src="{{basic.profileImage}}" alt="{{basic.name}}" class="profile-image" />
+        </figure>
         {{/if}}
         <div class="header-info">
           <h1 class="name">{{basic.name}}</h1>
-          <h2 class="title">{{lookup basic.title language}}</h2>
+          <h2 class="title">{{lookup basic "title" language}}</h2>
           <div class="contact-info">
             {{#each basic.contactInfo}}
             <div class="contact-item">
-              <i class="fas {{contactIcon type}}"></i>
+              <ion-icon class="{{getIcon type}}"></ion-icon>
               <span>{{value}}</span>
             </div>
             {{/each}}
             <div class="contact-item">
-              <i class="fas fa-map-marker-alt"></i>
-              <span>{{lookup basic.location language}}</span>
+              <ion-icon class="{{getIcon 'location'}}"></ion-icon>
+              <span>{{lookup basic "location" language}}</span>
             </div>
           </div>
         </div>
       </header>
 
-      <!-- Experience section -->
       <section class="experience">
         <h2 class="section-title">{{lookup (lookup metadata.sections language) "experience"}}</h2>
 
@@ -66,7 +63,6 @@
         {{/each}}
       </section>
 
-      <!-- Education section -->
       <section class="education">
         <h2 class="section-title">{{lookup (lookup metadata.sections language) "education"}}</h2>
 
