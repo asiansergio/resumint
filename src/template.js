@@ -27,7 +27,7 @@ const registerHelpers = () => {
       return "";
     }
 
-    if (subfield) {
+    if (typeof subfield === "string") {
       return obj[field][subfield];
     }
 

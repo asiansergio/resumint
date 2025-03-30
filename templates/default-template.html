@@ -11,6 +11,7 @@
 
   <body>
     <div class="resume-container">
+      {{!--
       <header class="header">
         {{#if basic.profileImage}}
         <figure class="profile-figure">
@@ -65,18 +66,17 @@
         </div>
         {{/each}}
       </section>
+      --}}
 
       <section class="education">
-        <h2 class="section-title">{{lookup (lookup metadata.sections language) "education"}}</h2>
+        <h2 class="section-title">{{lookup metadata.sections language "experience"}}</h2>
 
         {{#each education}}
         <div class="item">
           <div class="item-header">
             <div class="position">{{lookup institution ../language}}</div>
             <div class="company">
-              {{lookup degree ../language}} {{#if status}} {{lookup status ../language}}{{/if}}
-              {{#if credits}} {{lookup credits ../language}}{{/if}} {{#if level}} {{lookup level
-              ../language}}{{/if}}
+              {{lookup degree ../language}}
             </div>
           </div>
           <div class="date-location">

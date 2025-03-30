@@ -120,13 +120,13 @@ section {
 }
 
 .section-title {
-  color: var(--primary-color);
-  font-size: 1.4rem;
-  font-weight: 700;
-  border-bottom: 2px solid var(--primary-color);
-  padding-bottom: 0.5rem;
-  margin-bottom: 1rem;
+  font-weight: bold;
+  color: var(--secondary-color);
   text-transform: uppercase;
+  border-top: 1px solid var(--primary-color);
+  border-bottom: 1px solid var(--primary-color);
+  margin: 10px 0 ;
+  padding: 2px 0;
 }
 
 /* Experience and Education items */
