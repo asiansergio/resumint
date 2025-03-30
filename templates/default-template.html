@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{basic.name}} - Curriculum</title>
     <link rel="stylesheet" href="../css/styles.css" />
-    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+    <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/ionicons/7.1.0/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://cdnjs.cloudflare.com/ajax/libs/ionicons/7.1.0/ionicons/ionicons.js"></script>
   </head>
 
   <body>
@@ -17,19 +18,21 @@
         </figure>
         {{/if}}
         <div class="header-info">
-          <h1 class="name">{{basic.name}}</h1>
-          <h2 class="title">{{lookup basic "title" language}}</h2>
+          <div>
+            <h1 class="name">{{basic.name}}</h1>
+            <h2 class="title">{{lookup basic "title" language}}</h2>
+          </div>
           <div class="contact-info">
+            <div class="contact-item">
+              <ion-icon name="{{getIcon 'location'}}"></ion-icon>
+              <span>{{lookup basic "location" language}}</span>
+            </div>
             {{#each basic.contactInfo}}
             <div class="contact-item">
-              <ion-icon class="{{getIcon type}}"></ion-icon>
+              <ion-icon name="{{getIcon type}}"></ion-icon>
               <span>{{value}}</span>
             </div>
             {{/each}}
-            <div class="contact-item">
-              <ion-icon class="{{getIcon 'location'}}"></ion-icon>
-              <span>{{lookup basic "location" language}}</span>
-            </div>
           </div>
         </div>
       </header>
