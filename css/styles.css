@@ -12,6 +12,7 @@
   --border-color: #e2e8f0;
   --font-main: "Poppins", sans-serif;
   --section-spacing: 10px;
+  --left-margin: 15px;
 }
 
 * {
@@ -79,15 +80,14 @@ body {
 }
 
 .name {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: normal;
   color: var(--primary-color);
   letter-spacing: 1.4px;
-  margin-bottom: 5px;
 }
 
 .title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: normal;
   color: var(--secondary-color);
   letter-spacing: 1.8px;
@@ -114,33 +114,43 @@ body {
   color: var(--accent-color);
 }
 
-/* Section styling */
+/* Both Experience and Education */
 section {
-  margin-bottom: var(--section-spacing);
+  margin: var(--section-spacing) 0;
 }
 
 .section-title {
   font-weight: bold;
+  font-size: 18px;
   color: var(--secondary-color);
   text-transform: uppercase;
   border-top: 1px solid var(--primary-color);
   border-bottom: 1px solid var(--primary-color);
-  margin: 10px 0 ;
   padding: 2px 0;
 }
 
-/* Experience and Education items */
 .item {
-  margin-bottom: 1.5rem;
+  margin: 5px 0;
 }
 
 .item-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  margin-bottom: 0.4rem;
 }
 
+.item-description {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-left: var(--left-margin);
+}
+
+.location, .date {
+  display: inline-block;
+}
+
+/* Experience */
 .position {
   font-size: 1.2rem;
   font-weight: 600;
@@ -151,19 +161,10 @@ section {
   font-weight: 600;
 }
 
-.date-location {
-  display: flex;
-  justify-content: space-between;
-  color: var(--lightest-text);
-  font-size: 0.95rem;
-  margin-bottom: 0.5rem;
-}
-
 .tech-stack {
-  font-size: 0.9rem;
-  color: var(--lightest-text);
-  margin-bottom: 0.5rem;
   font-style: italic;
+  color: var(--light-text);
+  margin-left: var(--left-margin);
 }
 
 .responsibilities {
@@ -174,23 +175,13 @@ section {
   margin-bottom: 0.3rem;
 }
 
-@media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    text-align: center;
-  }
+/* Education */
+.institution {
+  font-weight: bold;
+  font-size: 14px;
+}
 
-  .contact-info {
-    justify-content: center;
-  }
-
-  .item-header,
-  .date-location {
-    flex-direction: column;
-    text-align: left;
-  }
-
-  .date-location div {
-    margin-bottom: 0.3rem;
-  }
+.degree {
+  font-weight: normal;
+  font-size: 14px;
 }
