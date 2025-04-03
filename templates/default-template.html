@@ -54,13 +54,11 @@
           </div>
           <div class="item-description">
             <h3 class="company">{{company}}</h3>
-            <p class="date">
-              {{lookup date.start ../language}} — {{lookup date.end ../language}}
-            </p>
+            <p class="date">{{lookup date.start ../language}} — {{lookup date.end ../language}}</p>
           </div>
 
           {{#if techStack}}
-          <h4 class="tech-stack"><b>Tech Stack:</b> {{join techStack ", "}}</h4>
+          <h4 class="tech-stack"><span class="italic">Tech Stack:</span> {{join techStack ", "}}</h4>
           {{/if}}
 
           <ul class="responsibilities">
