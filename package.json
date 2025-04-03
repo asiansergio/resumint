@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node main.js",
-    "demo": "node main.js --data ./data/example-data.json --html --htmlOnly",
+    "demo": "node main.js --data ./data/example-data.json --html",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
