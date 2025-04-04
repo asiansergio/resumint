@@ -20,6 +20,19 @@
   box-sizing: border-box;
 }
 
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+}
+
 body {
   font-family: var(--font-main);
   font-size: 12px;
@@ -129,7 +142,8 @@ section {
   justify-content: space-between;
 }
 
-.location, .date {
+.location,
+.date {
   display: inline-block;
 }
 

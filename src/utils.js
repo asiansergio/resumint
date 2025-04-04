@@ -26,26 +26,33 @@ export const generateHTML = (data, language, templatePath) => {
   }
 };
 
-export const generatePDF = async (html, outputPath) => {
+export const saveHTML = (html, outputPath) => {
   try {
-    const browser = await launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    writeFileSync(outputPath, html);
+    console.log(`HTML saved: ${outputPath}`);
+  } catch (error) {
+    console.error(`Error saving HTML: ${error.message}`);
+    process.exit(1);
+  }
+};
+
+export const generatePDF = async (htmlPath, outputPath) => {
+  try {
+    const browser = await launch();
+    const page = await browser.newPage();
+
+    await page.goto(htmlPath, {
+      waitUntil: "networkidle0"
     });
 
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-
-    // Set paper size to Letter by default
     await page.pdf({
       path: outputPath,
-      format: "Letter",
-      printBackground: true,
+      format: "A4",
       margin: {
-        top: "0.5in",
-        right: "0.5in",
-        bottom: "0.5in",
-        left: "0.5in"
+        top: "0",
+        right: "0",
+        bottom: "0",
+        left: "0"
       }
     });
 
@@ -53,16 +60,6 @@ export const generatePDF = async (html, outputPath) => {
     console.log(`PDF generated: ${outputPath}`);
   } catch (error) {
     console.error(`Error generating PDF: ${error.message}`);
-    process.exit(1);
-  }
-};
-
-export const saveHTML = (html, outputPath) => {
-  try {
-    writeFileSync(outputPath, html);
-    console.log(`HTML saved: ${outputPath}`);
-  } catch (error) {
-    console.error(`Error saving HTML: ${error.message}`);
     process.exit(1);
   }
 };
