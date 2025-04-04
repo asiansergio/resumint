@@ -1,9 +1,7 @@
 import { readFileSync, existsSync, mkdirSync } from "fs";
 import { resolve, join } from "path";
 import template from "./template.js";
-import {
-  getCurrentDate, generateHTML, generatePDF, saveHTML
-} from "./utils.js";
+import { getCurrentDate, generateHTML, generatePDF, saveHTML } from "./utils.js";
 
 const forgeResumes = async (argv) => {
   try {
@@ -28,15 +26,15 @@ const forgeResumes = async (argv) => {
         const baseFileName = `${resumeData.basic.name.toLowerCase().replace(/\s+/g, "-")}-${language}-${currentDate}`;
 
         const html = generateHTML(resumeData, language, templatePath);
+        const htmlPath = join(outputDir, `${baseFileName}.html`);
 
         if (argv.html) {
-          const htmlPath = join(outputDir, `${baseFileName}.html`);
           saveHTML(html, htmlPath);
         }
 
         if (!argv.htmlOnly) {
           const pdfPath = join(outputDir, `${baseFileName}.pdf`);
-          await generatePDF(html, pdfPath);
+          await generatePDF(htmlPath, pdfPath);
         }
       })
     );
