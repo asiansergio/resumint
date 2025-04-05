@@ -31,7 +31,7 @@ const registerHelpers = () => {
       return obj[field][subfield];
     }
 
-    return obj[field];
+    return obj[field] || obj;
   });
 };
 
