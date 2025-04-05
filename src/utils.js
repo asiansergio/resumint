@@ -45,6 +45,8 @@ export const generatePDF = async (htmlPath, outputPath) => {
       waitUntil: "networkidle0"
     });
 
+    await isHeightValid(page);
+
     await page.pdf({
       path: outputPath,
       format: "A4",
@@ -63,3 +65,18 @@ export const generatePDF = async (htmlPath, outputPath) => {
     process.exit(1);
   }
 };
+
+async function isHeightValid(page) {
+  const A4_HEIGHT_PX = 1123;
+
+  const contentHeight = await page.evaluate(() => {
+    const container = document.querySelector(".resume-container");
+    if (!container) {
+      console.warn("Resume container not found, using body height");
+      return document.body.scrollHeight;
+    }
+    return container.scrollHeight;
+  });
+
+  return contentHeight > A4_HEIGHT_PX;
+}
