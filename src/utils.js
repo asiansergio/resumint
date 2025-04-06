@@ -45,11 +45,9 @@ export const generatePDF = async (htmlPath, outputPath) => {
       waitUntil: "networkidle0"
     });
 
-    const isValidHeight = await isHeightValid(page);
-    if (!isValidHeight) {
+    if (!(await isValidHeight(page))) {
       console.error("Content height exceeds A4 threshold. PDF generation aborted.");
-      await browser.close();
-      process.exit(1);
+      return await browser.close();
     }
 
     await page.pdf({
@@ -71,7 +69,7 @@ export const generatePDF = async (htmlPath, outputPath) => {
   }
 };
 
-async function isHeightValid(page) {
+async function isValidHeight(page) {
   const A4_HEIGHT_PX = 1123;
 
   const contentHeight = await page.evaluate(() => {
@@ -83,5 +81,11 @@ async function isHeightValid(page) {
     return container.scrollHeight;
   });
 
-  return contentHeight > A4_HEIGHT_PX;
+  const isHeightValid = contentHeight <= A4_HEIGHT_PX;
+
+  if (!isHeightValid) {
+    console.log(`Content height (${contentHeight}px) exceeds A4 maximum (${A4_HEIGHT_PX}px)`);
+  }
+
+  return isHeightValid;
 }

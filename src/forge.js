@@ -1,11 +1,7 @@
-import {
-  readFileSync, existsSync, mkdirSync, unlinkSync
-} from "fs";
+import { readFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
 import { resolve, join } from "path";
 import template from "./template.js";
-import {
-  getCurrentDate, generateHTML, generatePDF, saveHTML
-} from "./utils.js";
+import { getCurrentDate, generateHTML, generatePDF, saveHTML } from "./utils.js";
 
 const forgeResumes = async (argv) => {
   try {
