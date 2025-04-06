@@ -29,7 +29,12 @@
   body {
     margin: 0 !important;
     padding: 0 !important;
-    background: white !important;
+    background: --background-color !important;
+  }
+
+  .resume-container {
+    background: var(--background-color);
+    box-shadow: none !important;
   }
 }
 
@@ -49,7 +54,8 @@ body {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   padding: 0.5in;
   width: 210mm;
-  height: 297mm;
+  max-height: 297mm;
+  overflow: hidden;
 }
 
 /* Header section */
@@ -105,7 +111,7 @@ body {
 .contact-item {
   display: flex;
   align-items: center;
-  color: var(--light-text);
+  color: var(--text-color);
 }
 
 .contact-item ion-icon {
@@ -121,13 +127,14 @@ section {
 
 .section-title {
   font-weight: bold;
-  font-size: 18px;
+  font-size: 16px;
   color: var(--secondary-color);
   text-transform: uppercase;
   border-top: 1px solid var(--primary-color);
   border-bottom: 1px solid var(--primary-color);
   padding: 2px 0;
   margin-bottom: 10px;
+  letter-spacing: 1.4px;
 }
 
 .item-header {
@@ -147,10 +154,16 @@ section {
   display: inline-block;
 }
 
+.experience .item:not(:last-child),
+.education .item:not(:last-child) {
+  margin-bottom: 5px;
+}
+
 /* Experience */
 .position {
   font-size: 14px;
   font-weight: bold;
+  letter-spacing: 0.5px;
 }
 
 .company {
@@ -174,18 +187,15 @@ section {
   margin-left: calc(var(--left-margin) * 2);
 }
 
-.responsibilities li {
-  margin-bottom: 0.3rem;
-}
-
 /* Education */
 .institution {
   font-weight: bold;
-  font-size: 14px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
 }
 
 .degree {
   font-weight: normal;
-  font-size: 14px;
+  font-size: 12px;
   margin-left: var(--left-margin);
 }

@@ -1,7 +1,11 @@
-import { readFileSync, existsSync, mkdirSync } from "fs";
+import {
+  readFileSync, existsSync, mkdirSync, unlinkSync
+} from "fs";
 import { resolve, join } from "path";
 import template from "./template.js";
-import { getCurrentDate, generateHTML, generatePDF, saveHTML } from "./utils.js";
+import {
+  getCurrentDate, generateHTML, generatePDF, saveHTML
+} from "./utils.js";
 
 const forgeResumes = async (argv) => {
   try {
@@ -23,18 +27,19 @@ const forgeResumes = async (argv) => {
 
     await Promise.all(
       languages.map(async (language) => {
-        const baseFileName = `${resumeData.basic.name.toLowerCase().replace(/\s+/g, "-")}-${language}-${currentDate}`;
+        const baseFileName = `${currentDate}-${language}-${resumeData.basic.name.toLowerCase().replace(/\s+/g, "-")}`;
 
         const html = generateHTML(resumeData, language, templatePath);
         const htmlPath = join(outputDir, `${baseFileName}.html`);
-
-        if (argv.html) {
-          saveHTML(html, htmlPath);
-        }
+        saveHTML(html, htmlPath);
 
         if (!argv.htmlOnly) {
           const pdfPath = join(outputDir, `${baseFileName}.pdf`);
           await generatePDF(htmlPath, pdfPath);
+        }
+
+        if (!argv.html && !argv.htmlOnly) {
+          unlinkSync(htmlPath);
         }
       })
     );
