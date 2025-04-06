@@ -45,7 +45,12 @@ export const generatePDF = async (htmlPath, outputPath) => {
       waitUntil: "networkidle0"
     });
 
-    await isHeightValid(page);
+    const isValidHeight = await isHeightValid(page);
+    if (!isValidHeight) {
+      console.error("Content height exceeds A4 threshold. PDF generation aborted.");
+      await browser.close();
+      process.exit(1);
+    }
 
     await page.pdf({
       path: outputPath,
