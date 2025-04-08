@@ -1,6 +1,6 @@
 export default {
   transform: {},
-  extensionsToTreatAsEsm: [".js"],
+  extensionsToTreatAsEsm: [],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1"
   },
