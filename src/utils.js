@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "fs";
 import pkg from "handlebars";
 import { launch } from "puppeteer";
+import { resolve } from "path";
 
 export const getCurrentDate = () => {
   const now = new Date();
@@ -41,7 +42,10 @@ export const generatePDF = async (htmlPath, outputPath) => {
     const browser = await launch();
     const page = await browser.newPage();
 
-    await page.goto(htmlPath, {
+    // To work both on Windows and Linux
+    const absoluteHtmlPath = `file://${resolve(htmlPath)}`;
+
+    await page.goto(absoluteHtmlPath, {
       waitUntil: "networkidle0"
     });
 
