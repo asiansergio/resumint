@@ -14,6 +14,8 @@ describe("Template Module", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    // Reset the helpers to prevent state leakage between tests
+    Handlebars.registerHelper.helpers = {};
   });
 
   test("registerHelpers registers all expected helpers", () => {
