@@ -69,7 +69,7 @@ export const generatePDF = async (htmlPath, outputPath) => {
   }
 };
 
-async function isValidHeight(page) {
+export async function isValidHeight(page) {
   const A4_HEIGHT_PX = 1123;
 
   const contentHeight = await page.evaluate(() => {
