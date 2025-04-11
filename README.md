@@ -18,6 +18,9 @@ cd resumeforge
 # Install dependencies
 npm install
 
+# If you have chrome installed you may skip this step
+npx puppeteer browsers install chrome
+
 # Run the tool
 node main.js [options]
 ```
