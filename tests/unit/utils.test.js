@@ -26,7 +26,6 @@ describe("Utils Module", () => {
     expect(result).toBe(true);
     expect(console.log).not.toHaveBeenCalled();
 
-    // Restore console.log
     console.log = originalConsoleLog;
   });
 
