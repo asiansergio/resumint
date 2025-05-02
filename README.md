@@ -29,8 +29,8 @@ node main.js [options]
 # Try the demo with example data
 npm run demo
 
-# Or run directly with example data
-node main.js --data ./data/example-data.json --html
+# Command to run directly with example data
+node main.js -d ./data/example-data.json
 ```
 
 ## Usage
