@@ -1,10 +1,11 @@
-# ResumeForge
+# ResuMint
 
-In a world where people constantly tweak, refine, and over-engineer their resumes,
-one tool rises to bring order to chaos. Forget clunky Word docs, endless formatting
-battles, and PDF struggles. For devs who don't know Adobe and refuse to use Canva, ResumeForge
-takes your pristine JSON and forges it into polished, multilingual resume variations with a
-single command. Because your CV should evolve as fast as you.
+A tool for developers who maintain multilingual resumes and endlessly tweak, refine, and over-engineer them.
+Forget clunky Word docs, endless formatting battles, and PDF struggles.
+For devs who avoid Adobe and won't touch Canva, ResuMint takes your structured JSON, applies HTML/CSS templates, and outputs polished, multilingual PDF resumes — all with a single command.
+It even spell-checks your content, so no more embarrassing mistakes.
+
+Because your CV should evolve as fast as you do.
 
 ## Getting Started
 
