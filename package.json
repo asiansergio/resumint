@@ -1,11 +1,11 @@
 {
-  "name": "resumeforge",
+  "name": "resumint",
   "version": "1.0.0",
   "description": "Generate multilingual resumes from JSON data",
   "main": "main.js",
   "type": "module",
   "bin": {
-    "resumeforge": "./main.js"
+    "resumint": "./main.js"
   },
   "scripts": {
     "demo": "node main.js --data ./data/example-data.json --html",

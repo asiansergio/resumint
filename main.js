@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import cli from "./src/cli.js";
-import forge from "./src/forge.js";
+import generator from "./src/generator.js";
 
 const argv = cli.parseArguments();
-forge.forgeResumes(argv);
+generator.generateResumes(argv);

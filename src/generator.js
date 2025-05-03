@@ -3,7 +3,7 @@ import { resolve, join } from "path";
 import template from "./template.js";
 import { getCurrentDate, generateHTML, generatePDF, saveHTML } from "./utils.js";
 
-const forgeResumes = async (argv) => {
+const generateResumes = async (argv) => {
   try {
     template.registerHelpers();
 
@@ -82,5 +82,5 @@ function ensureLanguageIsSpecified(languages) {
 }
 
 export default {
-  forgeResumes
+  generateResumes
 };
