@@ -11,8 +11,8 @@ Because your CV should evolve as fast as you do.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/resumeforge.git
-cd resumeforge
+git clone https://github.com/<yourusername>/resumint.git
+cd resumint
 
 # Install dependencies
 npm install
@@ -68,7 +68,7 @@ node main.js --html --output ./my-resumes
 
 ## Data Structure
 
-ResumeForge uses a JSON file to store your resume data. See [data/example-data.json](data/example-data.json) for a complete example with multilingual support.
+ResuMint uses a JSON file to store your resume data. See [data/example-data.json](data/example-data.json) for a complete example with multilingual support.
 
 ## Templates
 
