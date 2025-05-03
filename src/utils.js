@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from "fs";
+import fs from "fs/promises";
 import pkg from "handlebars";
 import { launch } from "puppeteer";
 import { resolve } from "path";
@@ -92,4 +93,13 @@ export async function isValidHeight(page) {
   }
 
   return isHeightValid;
+}
+
+export async function fileExists(filepath) {
+  try {
+    await fs.access(filepath);
+    return true;
+  } catch {
+    return false;
+  }
 }
