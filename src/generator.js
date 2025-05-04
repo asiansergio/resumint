@@ -5,14 +5,10 @@ import { getCurrentDate, createFileOperations, createLogger, withErrorHandling }
 
 const defaultConfig = {
   A4_HEIGHT_PX: 1123,
-  FILE_ENCODING: "utf8",
   DATE_FORMAT: "YYYYMMDD"
 };
 
-const createHTMLGenerator = (
-  handlebars = pkg,
-  fileOps = createFileOperations(defaultConfig.FILE_ENCODING)
-) => ({
+const createHTMLGenerator = (handlebars = pkg, fileOps = createFileOperations()) => ({
   generate(data, language, templatePath) {
     const templateSource = fileOps.readFile(templatePath);
     const template = handlebars.compile(templateSource);
@@ -108,7 +104,7 @@ const createGenerator = ({
   };
 
   const getLanguagesToGenerate = (argv, resumeData) =>
-    (argv.language ? [argv.language] : resumeData.languages);
+    argv.language ? [argv.language] : resumeData.languages;
 
   const ensureAtLeastOneLanguageIsSpecified = (languages) => {
     if (!languages || languages.length === 0) {

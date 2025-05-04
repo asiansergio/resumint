@@ -94,7 +94,8 @@ describe("Utils Module - Unit Tests", () => {
         writeFileSync: jest.fn(),
         existsSync: jest.fn(),
         mkdirSync: jest.fn(),
-        unlinkSync: jest.fn()
+        unlinkSync: jest.fn(),
+        readdir: jest.fn()
       };
 
       const fileOps = utils.createFileOperations("utf-8", mockFs);
@@ -105,11 +106,24 @@ describe("Utils Module - Unit Tests", () => {
       expect(fileOps).toHaveProperty("exists");
       expect(fileOps).toHaveProperty("createDir");
       expect(fileOps).toHaveProperty("deleteFile");
+      expect(fileOps).toHaveProperty("readDir");
+    });
+
+    test("readDir calls fs readdir", async () => {
+      const mockFs = {
+        readdir: jest.fn().mockResolvedValue(["file1.txt", "file2.txt"])
+      };
+
+      const fileOps = utils.createFileOperations("utf-8", mockFs);
+      const result = await fileOps.readDir("test-dir");
+
+      expect(mockFs.readdir).toHaveBeenCalledWith("test-dir");
+      expect(result).toEqual(["file1.txt", "file2.txt"]);
     });
 
     test("readJSON uses correct encoding", () => {
       const mockFs = {
-        readFileSync: jest.fn().mockReturnValue("{\"key\": \"value\"}")
+        readFileSync: jest.fn().mockReturnValue('{"key": "value"}')
       };
 
       const fileOps = utils.createFileOperations("utf-8", mockFs);

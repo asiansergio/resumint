@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
+import { readdir } from "fs/promises";
 
 export const getCurrentDate = () => {
   const now = new Date();
@@ -14,7 +15,8 @@ export const createLogger = (console = global.console) => ({
   warn: (...args) => console.warn(...args)
 });
 
-export const withErrorHandling = (fn, logger, process = global.process) =>
+export const withErrorHandling =
+  (fn, logger, process = global.process) =>
   async (...args) => {
     try {
       return await fn(...args);
@@ -25,8 +27,8 @@ export const withErrorHandling = (fn, logger, process = global.process) =>
   };
 
 export const createFileOperations = (
-  fileEncoding,
-  fs = { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync }
+  fileEncoding = "utf8",
+  fs = { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdir }
 ) => ({
   readJSON(path) {
     return JSON.parse(fs.readFileSync(path, fileEncoding));
@@ -50,5 +52,9 @@ export const createFileOperations = (
 
   deleteFile(path) {
     fs.unlinkSync(path);
+  },
+
+  async readDir(path) {
+    return fs.readdir(path);
   }
 });
