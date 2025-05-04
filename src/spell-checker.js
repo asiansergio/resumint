@@ -6,7 +6,7 @@ import { fileExists } from "./utils.js";
 const DICTIONARIES_DIR = "dictionaries";
 const WHITELIST_FILE = "whitelist.txt";
 
-export default async function spellCheckHtml(html, language) {
+const spellCheckHtml = async (html, language) => {
   try {
     const spell = await getDictionary(language);
 
@@ -43,7 +43,11 @@ export default async function spellCheckHtml(html, language) {
       misspelled: []
     };
   }
-}
+};
+
+export default {
+  spellCheckHtml
+};
 
 const dictionaryCache = {};
 

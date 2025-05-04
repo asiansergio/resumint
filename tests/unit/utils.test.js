@@ -1,4 +1,5 @@
 import { jest, describe, test, expect } from "@jest/globals";
+import fs from "fs/promises";
 import * as utils from "../../src/utils.js";
 
 describe("Utils Module", () => {
@@ -12,61 +13,21 @@ describe("Utils Module", () => {
     jest.restoreAllMocks();
   });
 
-  test("isValidHeight returns true when content fits A4", async () => {
-    const mockPage = {
-      evaluate: jest.fn().mockResolvedValue(1000) // Less than A4 height (1123px)
-    };
+  test("returns true when file exists", async () => {
+    jest.spyOn(fs, "access").mockResolvedValue();
 
-    const originalConsoleLog = console.log;
-    console.log = jest.fn();
+    const result = await utils.fileExists("test.txt");
 
-    const result = await utils.isValidHeight(mockPage);
-
-    expect(mockPage.evaluate).toHaveBeenCalled();
     expect(result).toBe(true);
-    expect(console.log).not.toHaveBeenCalled();
-
-    console.log = originalConsoleLog;
+    expect(fs.access).toHaveBeenCalledWith("test.txt");
   });
 
-  test("isValidHeight returns false when content exceeds A4", async () => {
-    const mockPage = {
-      evaluate: jest.fn().mockResolvedValue(1200) // Greater than A4 height (1123px)
-    };
+  test("returns false when file does not exist", async () => {
+    jest.spyOn(fs, "access").mockRejectedValue(new Error("File not found"));
 
-    const originalConsoleLog = console.log;
-    console.log = jest.fn();
+    const result = await utils.fileExists("missing.txt");
 
-    const result = await utils.isValidHeight(mockPage);
-
-    expect(mockPage.evaluate).toHaveBeenCalled();
     expect(result).toBe(false);
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining("Content height (1200px) exceeds A4 maximum (1123px)")
-    );
-
-    console.log = originalConsoleLog;
-  });
-
-  test("isValidHeight handles missing resume container", async () => {
-    const mockPage = {
-      evaluate: jest.fn().mockImplementation(async () => {
-        console.warn("Resume container not found, using body height");
-        return 900; // Mock body height
-      })
-    };
-
-    const originalConsoleWarn = console.warn;
-    console.warn = jest.fn();
-    const originalConsoleLog = console.log;
-    console.log = jest.fn();
-
-    const result = await utils.isValidHeight(mockPage);
-
-    expect(mockPage.evaluate).toHaveBeenCalled();
-    expect(result).toBe(true); // 900 < 1123, so it should be valid
-
-    console.warn = originalConsoleWarn;
-    console.log = originalConsoleLog;
+    expect(fs.access).toHaveBeenCalledWith("missing.txt");
   });
 });
