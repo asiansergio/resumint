@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
 
 export const getCurrentDate = () => {
   const now = new Date();
@@ -8,11 +8,47 @@ export const getCurrentDate = () => {
   return `${year}${month}${day}`;
 };
 
-export const fileExists = async (filepath) => {
-  try {
-    await fs.access(filepath);
-    return true;
-  } catch {
-    return false;
+export const createLogger = (console = global.console) => ({
+  log: (...args) => console.log(...args),
+  error: (...args) => console.error(...args),
+  warn: (...args) => console.warn(...args)
+});
+
+export const withErrorHandling = (fn, logger, process = global.process) =>
+  async (...args) => {
+    try {
+      return await fn(...args);
+    } catch (error) {
+      logger.error(`Error: ${error.message}`);
+      process.exit(1);
+    }
+  };
+
+export const createFileOperations = (
+  fileEncoding,
+  fs = { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync }
+) => ({
+  readJSON(path) {
+    return JSON.parse(fs.readFileSync(path, fileEncoding));
+  },
+
+  readFile(path) {
+    return fs.readFileSync(path, fileEncoding);
+  },
+
+  writeFile(path, content) {
+    fs.writeFileSync(path, content);
+  },
+
+  exists(path) {
+    return fs.existsSync(path);
+  },
+
+  createDir(path) {
+    fs.mkdirSync(path, { recursive: true });
+  },
+
+  deleteFile(path) {
+    fs.unlinkSync(path);
   }
-};
+});

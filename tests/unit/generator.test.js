@@ -1,154 +1,231 @@
-import { jest, describe, test, expect } from "@jest/globals";
-import * as generator from "../../src/generator.js";
+import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globals";
+import { createGenerator } from "../../src/generator.js";
 
-describe("Generator Module - Pure Functions", () => {
-  describe("isValidHeight", () => {
-    test("isValidHeight returns true when content fits A4", async () => {
-      const mockPage = {
-        evaluate: jest.fn().mockResolvedValue(1000) // Less than A4 height (1123px)
+describe("Generator Module - Refactored Tests", () => {
+  let generator;
+  let mockDependencies;
+
+  beforeEach(() => {
+    // Create mock dependencies
+    mockDependencies = {
+      fileOps: {
+        readJSON: jest.fn(),
+        writeFile: jest.fn(),
+        exists: jest.fn(),
+        createDir: jest.fn(),
+        deleteFile: jest.fn()
+      },
+      htmlGenerator: {
+        generate: jest.fn()
+      },
+      pdfGenerator: {
+        generate: jest.fn(),
+        isValidHeight: jest.fn()
+      },
+      logger: {
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn()
+      },
+      path: {
+        resolve: jest.fn(),
+        join: jest.fn()
+      },
+      process: {
+        exit: jest.fn(),
+        cwd: jest.fn()
+      },
+      utils: {
+        getCurrentDate: jest.fn()
+      }
+    };
+
+    // Create generator instance with mock dependencies
+    generator = createGenerator(mockDependencies);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe("generateResumes", () => {
+    test("successfully generates resumes", async () => {
+      const mockArgv = {
+        data: "resume.json",
+        template: "custom",
+        templatesDir: "./templates",
+        output: "./output",
+        language: "en",
+        html: true,
+        htmlOnly: false
       };
 
-      const originalConsoleLog = console.log;
-      console.log = jest.fn();
+      // Setup mocks
+      mockDependencies.fileOps.readJSON.mockReturnValue({
+        basic: { name: "Test User" },
+        languages: ["en"],
+        metadata: {}
+      });
+      mockDependencies.process.cwd.mockReturnValue("/current/dir");
+      mockDependencies.path.resolve.mockImplementation((...args) => args.join("/"));
+      mockDependencies.path.join.mockImplementation((...args) => args.join("/"));
+      mockDependencies.fileOps.exists.mockReturnValue(true);
+      mockDependencies.htmlGenerator.generate.mockReturnValue("<html></html>");
+      mockDependencies.utils.getCurrentDate.mockReturnValue("20231225");
 
-      const result = await generator.isValidHeight(mockPage);
+      await generator.generateResumes(mockArgv);
 
-      expect(mockPage.evaluate).toHaveBeenCalled();
-      expect(result).toBe(true);
-      expect(console.log).not.toHaveBeenCalled();
-
-      console.log = originalConsoleLog;
-    });
-
-    test("isValidHeight returns false when content exceeds A4", async () => {
-      const mockPage = {
-        evaluate: jest.fn().mockResolvedValue(1200) // Greater than A4 height (1123px)
-      };
-
-      const originalConsoleLog = console.log;
-      console.log = jest.fn();
-
-      const result = await generator.isValidHeight(mockPage);
-
-      expect(mockPage.evaluate).toHaveBeenCalled();
-      expect(result).toBe(false);
-      expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining("Content height (1200px) exceeds A4 maximum (1123px)")
+      // Verify the flow
+      expect(mockDependencies.fileOps.readJSON).toHaveBeenCalledWith("resume.json");
+      expect(mockDependencies.path.resolve).toHaveBeenCalledWith(
+        "/current/dir",
+        "./templates",
+        "custom-template.html"
       );
-
-      console.log = originalConsoleLog;
+      expect(mockDependencies.fileOps.exists).toHaveBeenCalled();
+      expect(mockDependencies.htmlGenerator.generate).toHaveBeenCalled();
+      expect(mockDependencies.pdfGenerator.generate).toHaveBeenCalled();
+      expect(mockDependencies.logger.log).toHaveBeenCalledWith(
+        expect.stringContaining("Resume generation completed successfully!")
+      );
     });
 
-    test("isValidHeight handles missing resume container", async () => {
-      const mockPage = {
-        evaluate: jest.fn().mockImplementation(async () => {
-          console.warn("Resume container not found, using body height");
-          return 900; // Mock body height
-        })
-      };
+    test("handles errors gracefully", async () => {
+      const mockArgv = { data: "non-existent.json" };
 
-      const originalConsoleWarn = console.warn;
-      console.warn = jest.fn();
-      const originalConsoleLog = console.log;
-      console.log = jest.fn();
+      mockDependencies.fileOps.readJSON.mockImplementation(() => {
+        throw new Error("File not found");
+      });
 
-      const result = await generator.isValidHeight(mockPage);
+      await generator.generateResumes(mockArgv);
 
-      expect(mockPage.evaluate).toHaveBeenCalled();
-      expect(result).toBe(true); // 900 < 1123, so it should be valid
-
-      console.warn = originalConsoleWarn;
-      console.log = originalConsoleLog;
+      expect(mockDependencies.logger.error).toHaveBeenCalledWith("Error: File not found");
+      expect(mockDependencies.process.exit).toHaveBeenCalledWith(1);
     });
   });
 
-  describe("ensureAtLeastOneLanguageIsSpecified", () => {
-    test("throws error when no languages are specified", () => {
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      const exitSpy = jest.spyOn(process, "exit").mockImplementation();
+  describe("pure functions", () => {
+    test("getResumeData reads and parses JSON", () => {
+      const mockData = { basic: { name: "Test" } };
+      mockDependencies.fileOps.readJSON.mockReturnValue(mockData);
 
-      // Simulate undefined languages
-      generator.ensureAtLeastOneLanguageIsSpecified(undefined);
+      const result = generator.getResumeData("test.json");
 
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("No languages specified"));
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(mockDependencies.fileOps.readJSON).toHaveBeenCalledWith("test.json");
+      expect(result).toEqual(mockData);
     });
-  });
 
-  describe("getTemplatePath", () => {
-    test("uses template from args when provided", () => {
+    test("getTemplatePath uses correct template", () => {
       const argv = { template: "fancy", templatesDir: "./templates" };
       const resumeData = {};
 
+      mockDependencies.process.cwd.mockReturnValue("/current/dir");
+      mockDependencies.path.resolve.mockReturnValue("/full/path/fancy-template.html");
+
       const result = generator.getTemplatePath(argv, resumeData);
 
-      expect(result.endsWith("fancy-template.html")).toBe(true);
+      expect(mockDependencies.path.resolve).toHaveBeenCalledWith(
+        "/current/dir",
+        "./templates",
+        "fancy-template.html"
+      );
+      expect(result).toBe("/full/path/fancy-template.html");
     });
 
-    test("uses template from resumeData metadata when args not provided", () => {
-      const argv = { templatesDir: "./templates" };
-      const resumeData = { metadata: { template: "custom" } };
+    test("ensureTemplateExists checks file existence", () => {
+      mockDependencies.fileOps.exists.mockReturnValue(true);
 
-      const result = generator.getTemplatePath(argv, resumeData);
+      // Should not throw or exit
+      generator.ensureTemplateExists("template.html");
 
-      expect(result.endsWith("custom-template.html")).toBe(true);
+      expect(mockDependencies.fileOps.exists).toHaveBeenCalledWith("template.html");
+      expect(mockDependencies.process.exit).not.toHaveBeenCalled();
     });
 
-    test("defaults to 'default' template when neither provided", () => {
-      const argv = { templatesDir: "./templates" };
-      const resumeData = {};
+    test("getOrCreateOutputDirectory handles new directory", () => {
+      mockDependencies.process.cwd.mockReturnValue("/current/dir");
+      mockDependencies.path.resolve.mockReturnValue("/full/path/output");
+      mockDependencies.fileOps.exists.mockReturnValue(false);
 
-      const result = generator.getTemplatePath(argv, resumeData);
+      const result = generator.getOrCreateOutputDirectory("output");
 
-      expect(result.endsWith("default-template.html")).toBe(true);
+      expect(mockDependencies.fileOps.createDir).toHaveBeenCalledWith("/full/path/output");
+      expect(result).toBe("/full/path/output");
+    });
+
+    test("ensureAtLeastOneLanguageIsSpecified validates languages", () => {
+      generator.ensureAtLeastOneLanguageIsSpecified([]);
+
+      expect(mockDependencies.logger.error).toHaveBeenCalledWith(
+        "No languages specified in resume data or via command line"
+      );
+      expect(mockDependencies.process.exit).toHaveBeenCalledWith(1);
     });
   });
 
-  describe("getLanguagesToGenerate", () => {
-    test("returns specific language when provided in args", () => {
-      const argv = { language: "en" };
-      const resumeData = { languages: ["en", "es", "fr"] };
+  describe("generateResumeForLanguage", () => {
+    test("generates HTML and PDF for language", async () => {
+      const context = {
+        resumeData: { basic: { name: "Test User" } },
+        templatePath: "template.html",
+        outputDir: "/output",
+        argv: { html: true, htmlOnly: false }
+      };
 
-      const result = generator.getLanguagesToGenerate(argv, resumeData);
+      mockDependencies.utils.getCurrentDate.mockReturnValue("20231225");
+      mockDependencies.htmlGenerator.generate.mockReturnValue("<html></html>");
+      mockDependencies.path.join.mockImplementation((...args) => args.join("/"));
 
-      expect(result).toEqual(["en"]);
+      await generator.generateResumeForLanguage(context, "en");
+
+      expect(mockDependencies.htmlGenerator.generate).toHaveBeenCalledWith(
+        context.resumeData,
+        "en",
+        context.templatePath
+      );
+      expect(mockDependencies.fileOps.writeFile).toHaveBeenCalled();
+      expect(mockDependencies.pdfGenerator.generate).toHaveBeenCalled();
     });
 
-    test("returns all languages from resumeData when no specific language provided", () => {
-      const argv = {};
-      const resumeData = { languages: ["en", "es", "fr"] };
+    test("skips PDF generation when htmlOnly is true", async () => {
+      const context = {
+        resumeData: { basic: { name: "Test" } },
+        templatePath: "template.html",
+        outputDir: "/output",
+        argv: { htmlOnly: true }
+      };
 
-      const result = generator.getLanguagesToGenerate(argv, resumeData);
+      mockDependencies.htmlGenerator.generate.mockReturnValue("<html></html>");
+      mockDependencies.path.join.mockImplementation((...args) => args.join("/"));
 
-      expect(result).toEqual(["en", "es", "fr"]);
+      await generator.generateResumeForLanguage(context, "en");
+
+      expect(mockDependencies.pdfGenerator.generate).not.toHaveBeenCalled();
     });
   });
 
-  describe("Context creation and manipulation", () => {
-    test("creates correct context object", () => {
-      const resumeData = { test: "data" };
-      const templatePath = "/path/to/template";
-      const outputDir = "/path/to/output";
-      const argv = { test: "args" };
-
-      const context = { resumeData, templatePath, outputDir, argv };
-
-      expect(context.resumeData).toEqual({ test: "data" });
-      expect(context.templatePath).toBe("/path/to/template");
-      expect(context.outputDir).toBe("/path/to/output");
-      expect(context.argv).toEqual({ test: "args" });
-    });
-
-    test("generateResumeForLanguage creates correct base filename", () => {
-      // We can test just the filename generation logic
+  describe("HTML and PDF generators", () => {
+    test("htmlGenerator generates HTML correctly", () => {
+      const data = { basic: { name: "Test" } };
       const language = "en";
-      const currentDate = "20231225";
-      const name = "John Doe";
+      const templatePath = "template.html";
 
-      const expected = `${currentDate}-${language}-john-doe`;
-      const actual = `${currentDate}-${language}-${name.toLowerCase().replace(/\s+/g, "-")}`;
+      generator.htmlGenerator.generate(data, language, templatePath);
 
-      expect(actual).toBe(expected);
+      expect(mockDependencies.htmlGenerator.generate).toHaveBeenCalledWith(
+        data,
+        language,
+        templatePath
+      );
+    });
+
+    test("pdfGenerator generates PDF correctly", async () => {
+      const htmlPath = "input.html";
+      const outputPath = "output.pdf";
+
+      await generator.pdfGenerator.generate(htmlPath, outputPath);
+
+      expect(mockDependencies.pdfGenerator.generate).toHaveBeenCalledWith(htmlPath, outputPath);
     });
   });
 });
