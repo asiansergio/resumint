@@ -106,7 +106,7 @@ const createGenerator = ({
   };
 
   const getLanguagesToGenerate = (argv, resumeData) =>
-    (argv.language ? [argv.language] : resumeData.languages);
+    argv.language ? [argv.language] : resumeData.languages;
 
   const ensureAtLeastOneLanguageIsSpecified = (languages) => {
     if (!languages || languages.length === 0) {
@@ -119,7 +119,9 @@ const createGenerator = ({
     const spellCheckResult = await spellCheckerModule.spellCheckHtml(html, language);
 
     if (spellCheckResult.misspelledCount > 0) {
-      logger.warn(`Found ${spellCheckResult.misspelledCount} misspelled words in '${language}' resume:`);
+      logger.warn(
+        `Found ${spellCheckResult.misspelledCount} misspelled words in '${language}' resume:`
+      );
       spellCheckResult.misspelled.forEach(({ word, suggestions }) => {
         logger.warn(`- "${word}" -> Suggestions: ${suggestions.join(", ")}`);
       });
