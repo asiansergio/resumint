@@ -123,7 +123,8 @@ describe("Utils Module - Unit Tests", () => {
 
     test("readJSON uses correct encoding", () => {
       const mockFs = {
-        readFileSync: jest.fn().mockReturnValue("{\"key\": \"value\"}")
+        // eslint-disable-next-line quotes
+        readFileSync: jest.fn().mockReturnValue('{"key": "value"}')
       };
 
       const fileOps = utils.createFileOperations("utf-8", mockFs);

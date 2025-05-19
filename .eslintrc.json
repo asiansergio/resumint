@@ -5,7 +5,7 @@
     "es2021": true,
     "node": true
   },
-  "extends": "airbnb-base",
+  "extends": ["airbnb-base", "prettier"],
   "parserOptions": {
     "ecmaVersion": "latest"
   },
@@ -17,7 +17,12 @@
     "no-use-before-define": ["error", "nofunc"],
     "consistent-return": "off",
     "implicit-arrow-linebreak": "off",
-    "object-curly-newline": "off",
+    "object-curly-newline": [
+      "error",
+      {
+        "ImportDeclaration": { "consistent": true }
+      }
+    ],
     "import/extensions": [
       "error",
       "ignorePackages",

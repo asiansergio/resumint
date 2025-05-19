@@ -15,7 +15,8 @@ export const createLogger = (console = global.console) => ({
   warn: (...args) => console.warn(...args)
 });
 
-export const withErrorHandling = (fn, logger, process = global.process) =>
+export const withErrorHandling =
+  (fn, logger, process = global.process) =>
   async (...args) => {
     try {
       return await fn(...args);
