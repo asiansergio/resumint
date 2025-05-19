@@ -4,7 +4,7 @@ import { createFileOperations } from "./utils.js";
 
 const defaultConfig = {
   DICTIONARIES_DIR: "dictionaries",
-  WHITELIST_DIR: "whitelists",
+  WHITELIST_DIR: "whitelist",
   MAX_SUGGESTIONS: 5
 };
 
