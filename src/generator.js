@@ -138,7 +138,9 @@ const createGenerator = ({
     const html = htmlGenerator.generate(resumeData, language, templatePath);
     const htmlPath = path.join(outputDir, `${baseFileName}.html`);
 
-    spellCheckHtml(html, language);
+    if (!argv.noSpellCheck) {
+      spellCheckHtml(html, language);
+    }
 
     fileOps.writeFile(htmlPath, html);
     logger.log(`HTML saved: ${htmlPath}`);

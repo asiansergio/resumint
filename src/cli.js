@@ -41,10 +41,16 @@ const parseArguments = () =>
       type: "string",
       default: "./templates"
     })
+    .option("noSpellCheck", {
+      describe: "Skip spell checking",
+      type: "boolean",
+      default: false
+    })
     .example("$0 --data ./my-resume.json", "Generate resumes from a specific JSON file")
     .example("$0 --language en", "Generate resume only for English")
     .example("$0 --template fancy", "Use the fancy-template.html template")
     .example("$0 --html --output ./my-resumes", "Save both HTML and PDF to custom directory")
+    .example("$0 --noSpellCheck", "Skip spell checking")
     .help()
     .alias("help", "h")
     .version()
