@@ -151,7 +151,7 @@ const createDictionaryManager = (
           const content = fileOps.readFile(whitelistFilePath);
           const terms = content
             .split("\n")
-            .map((term) => term.trim())
+            .map((term) => term.trim().toLowerCase())
             .filter((term) => term && !term.startsWith("#"));
 
           terms.forEach((term) => spell.add(term));

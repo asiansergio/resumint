@@ -23,7 +23,7 @@ C#
 C++
 C
 JavaScript
-TypeScrypt
+TypeScript
 Rust
 Java
 Express
@@ -61,6 +61,7 @@ Electron
 # Commonly used software dev terms
 CI/CD
 Microservices
+Microservicios
 Frontend
 Backend
 DevOps
