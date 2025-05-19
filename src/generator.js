@@ -139,7 +139,7 @@ const createGenerator = ({
     const htmlPath = path.join(outputDir, `${baseFileName}.html`);
 
     if (!argv.noSpellCheck) {
-      spellCheckHtml(html, language);
+      await spellCheckHtml(html, language);
     }
 
     fileOps.writeFile(htmlPath, html);
