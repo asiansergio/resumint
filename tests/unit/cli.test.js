@@ -158,4 +158,11 @@ describe("CLI Module", () => {
     expect(args.html).toBe(true);
     expect(args.output).toBe("./my-resumes");
   });
+
+  test("parseArguments handles --noSpellCheck argument example", () => {
+    process.argv = ["node", "main.js", "--noSpellCheck"];
+
+    const args = cli.parseArguments();
+    expect(args.noSpellCheck).toBe(true);
+  });
 });

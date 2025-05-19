@@ -1,7 +1,5 @@
-import { readFileSync, writeFileSync } from "fs";
-import pkg from "handlebars";
-import { launch } from "puppeteer";
-import { resolve } from "path";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
+import { readdir } from "fs/promises";
 
 export const getCurrentDate = () => {
   const now = new Date();
@@ -11,85 +9,52 @@ export const getCurrentDate = () => {
   return `${year}${month}${day}`;
 };
 
-// eslint-disable-next-line consistent-return
-export const generateHTML = (data, language, templatePath) => {
-  try {
-    const templateSource = readFileSync(templatePath, "utf8");
-    const template = pkg.compile(templateSource);
+export const createLogger = (console = global.console) => ({
+  log: (...args) => console.log(...args),
+  error: (...args) => console.error(...args),
+  warn: (...args) => console.warn(...args)
+});
 
-    return template({
-      ...data,
-      language
-    });
-  } catch (error) {
-    console.error(`Error generating HTML: ${error.message}`);
-    process.exit(1);
-  }
-};
-
-export const saveHTML = (html, outputPath) => {
-  try {
-    writeFileSync(outputPath, html);
-    console.log(`HTML saved: ${outputPath}`);
-  } catch (error) {
-    console.error(`Error saving HTML: ${error.message}`);
-    process.exit(1);
-  }
-};
-
-export const generatePDF = async (htmlPath, outputPath) => {
-  try {
-    const browser = await launch();
-    const page = await browser.newPage();
-
-    // To work both on Windows and Linux
-    const absoluteHtmlPath = `file://${resolve(htmlPath)}`;
-
-    await page.goto(absoluteHtmlPath, {
-      waitUntil: "networkidle0"
-    });
-
-    if (!(await isValidHeight(page))) {
-      console.error("Content height exceeds A4 threshold. PDF generation aborted.");
-      return await browser.close();
+export const withErrorHandling =
+  (fn, logger, process = global.process) =>
+  async (...args) => {
+    try {
+      return await fn(...args);
+    } catch (error) {
+      logger.error(`Error: ${error.message}`);
+      process.exit(1);
     }
+  };
 
-    await page.pdf({
-      path: outputPath,
-      format: "A4",
-      margin: {
-        top: "0",
-        right: "0",
-        bottom: "0",
-        left: "0"
-      }
-    });
+export const createFileOperations = (
+  fileEncoding = "utf8",
+  fs = { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdir }
+) => ({
+  readJSON(path) {
+    return JSON.parse(fs.readFileSync(path, fileEncoding));
+  },
 
-    await browser.close();
-    console.log(`PDF generated: ${outputPath}`);
-  } catch (error) {
-    console.error(`Error generating PDF: ${error.message}`);
-    process.exit(1);
+  readFile(path) {
+    return fs.readFileSync(path, fileEncoding);
+  },
+
+  writeFile(path, content) {
+    fs.writeFileSync(path, content);
+  },
+
+  exists(path) {
+    return fs.existsSync(path);
+  },
+
+  createDir(path) {
+    fs.mkdirSync(path, { recursive: true });
+  },
+
+  deleteFile(path) {
+    fs.unlinkSync(path);
+  },
+
+  async readDir(path) {
+    return fs.readdir(path);
   }
-};
-
-export async function isValidHeight(page) {
-  const A4_HEIGHT_PX = 1123;
-
-  const contentHeight = await page.evaluate(() => {
-    const container = document.querySelector(".resume-container");
-    if (!container) {
-      console.warn("Resume container not found, using body height");
-      return document.body.scrollHeight;
-    }
-    return container.scrollHeight;
-  });
-
-  const isHeightValid = contentHeight <= A4_HEIGHT_PX;
-
-  if (!isHeightValid) {
-    console.log(`Content height (${contentHeight}px) exceeds A4 maximum (${A4_HEIGHT_PX}px)`);
-  }
-
-  return isHeightValid;
-}
+});
