@@ -4,7 +4,7 @@ import { createFileOperations } from "./utils.js";
 
 const defaultConfig = {
   DICTIONARIES_DIR: "dictionaries",
-  WHITELIST_FILE: "whitelist.txt",
+  WHITELIST_DIR: "whitelists",
   MAX_SUGGESTIONS: 5
 };
 
@@ -120,7 +120,7 @@ const createDictionaryManager = (
 
           const spell = nspellModule(affData, dicData);
 
-          await this.addWhitelistedTerms(spell);
+          await this.addWhitelistedTerms(spell, language);
 
           dictionaryCache[language] = spell;
           return spell;
@@ -139,23 +139,43 @@ const createDictionaryManager = (
       return dummySpell;
     },
 
-    async addWhitelistedTerms(spell) {
+    async addWhitelistedTerms(spell, language) {
       try {
-        const whitelistFilePath = pathModule.join(
+        const whitelistDirPath = pathModule.join(
           process.cwd(),
           config.DICTIONARIES_DIR,
-          config.WHITELIST_FILE
+          config.WHITELIST_DIR
         );
 
-        if (fileOps.exists(whitelistFilePath)) {
-          const content = fileOps.readFile(whitelistFilePath);
-          const terms = content
-            .split("\n")
-            .map((term) => term.trim().toLowerCase())
-            .filter((term) => term && !term.startsWith("#"));
-
-          terms.forEach((term) => spell.add(term));
+        if (!fileOps.exists(whitelistDirPath)) {
+          logger.log(`Whitelist directory not found: ${whitelistDirPath}`);
+          return;
         }
+
+        const whitelistFiles = await fileOps.readDir(whitelistDirPath); // Add await here
+
+        whitelistFiles
+          .filter((file) => file.endsWith(".txt"))
+          .forEach((file) => {
+            const filePath = pathModule.join(whitelistDirPath, file);
+
+            // Check if this is a language-specific whitelist
+            // Format: whitelist-en.txt, whitelist-es.txt, etc.
+            const langSpecific = file.match(/^.*-([a-z]{2})\.txt$/);
+
+            // If it's a language-specific file, only use it for the right language
+            if (langSpecific && langSpecific[1] !== language) {
+              return;
+            }
+
+            const content = fileOps.readFile(filePath);
+            const terms = content
+              .split("\n")
+              .map((term) => term.trim().toLowerCase())
+              .filter((term) => term && !term.startsWith("#"));
+
+            terms.forEach((term) => spell.add(term));
+          });
       } catch (error) {
         logger.error(`Error loading whitelist: ${error.message}`);
       }
