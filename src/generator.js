@@ -2,6 +2,7 @@ import { resolve, join } from "path";
 import pkg from "handlebars";
 import { launch } from "puppeteer";
 import { getCurrentDate, createFileOperations, createLogger, withErrorHandling } from "./utils.js";
+import spellChecker from "./spell-checker.js";
 
 const defaultConfig = {
   A4_HEIGHT_PX: 1123,
@@ -74,6 +75,7 @@ const createGenerator = ({
   fileOps = createFileOperations(),
   htmlGenerator = createHTMLGenerator(),
   pdfGenerator = createPDFGenerator(),
+  spellCheckerModule = spellChecker,
   logger = createLogger(),
   path = { resolve, join },
   process = global.process,
@@ -104,12 +106,25 @@ const createGenerator = ({
   };
 
   const getLanguagesToGenerate = (argv, resumeData) =>
-    argv.language ? [argv.language] : resumeData.languages;
+    (argv.language ? [argv.language] : resumeData.languages);
 
   const ensureAtLeastOneLanguageIsSpecified = (languages) => {
     if (!languages || languages.length === 0) {
       logger.error("No languages specified in resume data or via command line");
       process.exit(1);
+    }
+  };
+
+  const spellCheckHtml = async (html, language) => {
+    const spellCheckResult = await spellCheckerModule.spellCheckHtml(html, language);
+
+    if (spellCheckResult.misspelledCount > 0) {
+      logger.warn(`Found ${spellCheckResult.misspelledCount} misspelled words in '${language}' resume:`);
+      spellCheckResult.misspelled.forEach(({ word, suggestions }) => {
+        logger.warn(`- "${word}" -> Suggestions: ${suggestions.join(", ")}`);
+      });
+    } else {
+      logger.log(`✓ No spelling errors found in ${language} resume`);
     }
   };
 
@@ -122,6 +137,8 @@ const createGenerator = ({
 
     const html = htmlGenerator.generate(resumeData, language, templatePath);
     const htmlPath = path.join(outputDir, `${baseFileName}.html`);
+
+    spellCheckHtml(html, language);
 
     fileOps.writeFile(htmlPath, html);
     logger.log(`HTML saved: ${htmlPath}`);

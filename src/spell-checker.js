@@ -5,8 +5,7 @@ import { createFileOperations } from "./utils.js";
 const defaultConfig = {
   DICTIONARIES_DIR: "dictionaries",
   WHITELIST_FILE: "whitelist.txt",
-  MAX_SUGGESTIONS: 5,
-  FILE_ENCODING: "utf8"
+  MAX_SUGGESTIONS: 5
 };
 
 const createTextProcessor = () => ({
@@ -34,12 +33,34 @@ const createTextProcessor = () => ({
     return text.replace(/\s+/g, " ").trim();
   },
 
-  extractWords(text) {
-    return text.split(/\s+/);
+  cleanWord(word) {
+    // Remove punctuation from start and end of word
+    return word.replace(/^[.,!?;:()[\]{}\-—–""'']+|[.,!?;:()[\]{}\-—–""'']+$/g, "");
   },
 
-  isNumericWord(word) {
-    return /[0-9]/.test(word);
+  extractWords(text) {
+    // Split on whitespace and filter out empty strings
+    return text.split(/\s+/).filter(Boolean);
+  },
+
+  isWordToSkip(word) {
+    // Skip if contains numbers
+    if (/[0-9]/.test(word)) {
+      return true;
+    }
+
+    // Skip if it's purely symbols/punctuation
+    if (!/[a-zA-ZÀ-ž]/.test(word)) {
+      return true;
+    }
+
+    // Skip very short cleaned words
+    const cleanedWord = this.cleanWord(word);
+    if (cleanedWord.length <= 1) {
+      return true;
+    }
+
+    return false;
   }
 });
 
@@ -108,10 +129,14 @@ const createDictionaryManager = (
         }
       }
 
-      logger.log("No dictionaries found, creating empty dictionary");
-      const spell = nspellModule({ dictionary: {} });
-      dictionaryCache[language] = spell;
-      return spell;
+      logger.log(`No dictionaries found, creating empty dictionary for '${language}' resume`);
+      const dummySpell = {
+        correct: () => true, // All words are correct
+        suggest: () => [], // No suggestions
+        add: () => {} // No-op for adding words
+      };
+      dictionaryCache[language] = dummySpell;
+      return dummySpell;
     },
 
     async addWhitelistedTerms(spell) {
@@ -130,7 +155,6 @@ const createDictionaryManager = (
             .filter((term) => term && !term.startsWith("#"));
 
           terms.forEach((term) => spell.add(term));
-          logger.log(`Added ${terms.length} whitelisted terms`);
         }
       } catch (error) {
         logger.error(`Error loading whitelist: ${error.message}`);
@@ -156,15 +180,18 @@ const createSpellChecker = (
       const words = textProcessor.extractWords(text);
       const misspelled = [];
 
-      words.forEach((word) => {
-        if (textProcessor.isNumericWord(word)) {
+      words.forEach((rawWord) => {
+        const cleanedWord = textProcessor.cleanWord(rawWord);
+
+        if (textProcessor.isWordToSkip(cleanedWord)) {
           return;
         }
 
-        if (!spell.correct(word)) {
+        if (!spell.correct(cleanedWord)) {
           misspelled.push({
-            word,
-            suggestions: spell.suggest(word).slice(0, config.MAX_SUGGESTIONS)
+            word: rawWord,
+            cleanedWord, // Include the cleaned version for reference
+            suggestions: spell.suggest(cleanedWord).slice(0, config.MAX_SUGGESTIONS)
           });
         }
       });

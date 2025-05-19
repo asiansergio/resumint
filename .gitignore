@@ -52,3 +52,11 @@ $RECYCLE.BIN/
 
 personal-data.json
 images/personal-profile-picture.*
+
+# Ignore everything in dictionaries directory
+dictionaries/*
+
+# But keep these specific files
+!dictionaries/en.aff
+!dictionaries/en.dic
+!dictionaries/whitelist.txt

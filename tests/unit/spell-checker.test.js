@@ -1,4 +1,4 @@
-import { jest, describe, test, expect, beforeEach, afterEach} from "@jest/globals";
+import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globals";
 import {
   createSpellCheckerModule,
   createTextProcessor,
@@ -32,9 +32,9 @@ describe("Spell Checker Module", () => {
     });
 
     test("identifies numeric words", () => {
-      expect(textProcessor.isNumericWord("abc123")).toBe(true);
-      expect(textProcessor.isNumericWord("123")).toBe(true);
-      expect(textProcessor.isNumericWord("hello")).toBe(false);
+      expect(textProcessor.isWordToSkip("abc123")).toBe(true);
+      expect(textProcessor.isWordToSkip("123")).toBe(true);
+      expect(textProcessor.isWordToSkip("hello")).toBe(false);
     });
   });
 
@@ -131,10 +131,13 @@ describe("Spell Checker Module", () => {
       mockTextProcessor = {
         extractTextFromHtml: jest.fn(),
         extractWords: jest.fn(),
-        isNumericWord: jest.fn()
+        cleanWord: jest.fn(),
+        isWordToSkip: jest.fn()
       };
       mockLogger = {
-        error: jest.fn()
+        error: jest.fn(),
+        log: jest.fn(),
+        warn: jest.fn()
       };
       spellChecker = createSpellChecker(mockDictionaryManager, mockTextProcessor, {}, mockLogger);
     });
@@ -142,13 +145,16 @@ describe("Spell Checker Module", () => {
     test("identifies misspelled words", async () => {
       const mockSpell = {
         correct: jest.fn().mockImplementation((word) => word !== "worng"),
-        suggest: jest.fn().mockReturnValue(["wrong", "word", "working"])
+        suggest: jest.fn().mockReturnValue(["wrong", "word", "working"]),
+        add: jest.fn()
       };
 
       mockDictionaryManager.getDictionary.mockResolvedValue(mockSpell);
+      mockDictionaryManager.addWhitelistedTerms = jest.fn().mockResolvedValue(undefined);
       mockTextProcessor.extractTextFromHtml.mockReturnValue("This is worng text");
       mockTextProcessor.extractWords.mockReturnValue(["This", "is", "worng", "text"]);
-      mockTextProcessor.isNumericWord.mockReturnValue(false);
+      mockTextProcessor.cleanWord = jest.fn().mockImplementation((word) => word);
+      mockTextProcessor.isWordToSkip.mockReturnValue(false);
 
       const result = await spellChecker.spellCheckHtml("<html>test</html>", "en");
 
