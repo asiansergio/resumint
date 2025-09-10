@@ -135,7 +135,10 @@ const createGenerator = ({
     language
   ) => {
     const currentDate = utils.getCurrentDate();
-    const baseFileName = `${currentDate}-${language}-${resumeData.basic.name.toLowerCase().replace(/\s+/g, "-")}`;
+    const baseFileName = `${currentDate}-${language}-${resumeData.basic.name
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")}`;
 
     const html = htmlGenerator.generate(resumeData, language, templatePath);
     const htmlPath = path.join(outputDir, `${baseFileName}.html`);

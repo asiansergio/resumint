@@ -84,8 +84,8 @@
           <div class="item-description">
             <h3 class="degree">{{lookup degree ../language}}</h3>
             <p class="date">
-              {{#if date.start}}{{lookup date.start ../language}} — {{/if}} {{lookup date.end
-              ../language}}
+              {{#if date.start}}{{lookup date.start ../language}}{{/if}}{{#if date.end}} — {{lookup
+              date.end ../language}}{{/if}}
             </p>
           </div>
         </article>

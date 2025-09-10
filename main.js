@@ -14,7 +14,6 @@ async function main() {
       // You can override specific dependencies here if needed
       // For example:
       // logger: createLogger(console),
-      // config: { A4_HEIGHT_PX: 1500 }
     });
 
     await generator.generateResumes(argv);
