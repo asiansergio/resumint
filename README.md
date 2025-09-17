@@ -16,13 +16,13 @@ cd resumint
 # Install dependencies
 npm install
 
-> Working to getting rid of all dependencies
 # If you have chrome installed you may skip this step
 npx puppeteer browsers install chrome
 
 # Run the tool
 npm start [options]
 ```
+> ℹ️ Working to getting rid of all dependencies
 
 ## Quick Start
 
