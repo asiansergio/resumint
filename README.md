@@ -1,11 +1,10 @@
 # ResuMint
 
-A tool for developers who maintain multilingual resumes.
-Avoid fighting clunky Word docs, endless formatting battles, and sneaky typos.
-For those who don't know Adobe and won't touch Canva, ResuMint takes your structured JSON, applies HTML/CSS templates, and outputs polished, multilingual PDF resumes — all with a single command.
-It even spell-checks your content, so no more embarrassing mistakes.
+A refreshing tool for developers who maintain multilingual resumes:
 
-Useful to keep updated CVs.
+Stop fighting clunky Word docs, endless formatting battles, and sneaky typos.
+If you don't know Adobe and won't touch Canva, ResuMint takes your structured JSON, applies your HTML/CSS templates and outputs multilingual PDF resumes — all with a single command.
+It even spell-checks your content, so no more embarrassing mistakes 😉
 
 ## Getting Started
 
@@ -22,7 +21,7 @@ npm install
 npx puppeteer browsers install chrome
 
 # Run the tool
-node ./dist/main.js [options]
+npm start [options]
 ```
 
 ## Quick Start
