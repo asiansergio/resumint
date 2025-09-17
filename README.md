@@ -1,27 +1,28 @@
 # ResuMint
 
-A tool for developers who maintain multilingual resumes and endlessly tweak, refine, and over-engineer them.
-Forget clunky Word docs, endless formatting battles, and sneaky typos.
-For devs who avoid Adobe and won't touch Canva, ResuMint takes your structured JSON, applies HTML/CSS templates, and outputs polished, multilingual PDF resumes — all with a single command.
+A tool for developers who maintain multilingual resumes.
+Avoid fighting clunky Word docs, endless formatting battles, and sneaky typos.
+For those who don't know Adobe and won't touch Canva, ResuMint takes your structured JSON, applies HTML/CSS templates, and outputs polished, multilingual PDF resumes — all with a single command.
 It even spell-checks your content, so no more embarrassing mistakes.
 
-Because your CV should evolve as fast as you do.
+Useful to keep updated CVs.
 
 ## Getting Started
 
 ```bash
 # Clone the repository
-git clone https://github.com/<yourusername>/resumint.git
+git clone https://github.com/asiansergio/resumint.git
 cd resumint
 
 # Install dependencies
 npm install
 
+> Working to getting rid of all dependencies
 # If you have chrome installed you may skip this step
 npx puppeteer browsers install chrome
 
 # Run the tool
-node main.js [options]
+node ./dist/main.js [options]
 ```
 
 ## Quick Start
@@ -31,13 +32,13 @@ node main.js [options]
 npm run demo
 
 # Command to run directly with example data
-node main.js -d ./data/example-data.json
+npm start -d ./data/example-data.json
 ```
 
 ## Usage
 
 ```bash
-node main.js [options]
+npm start [options]
 ```
 
 ### Options
@@ -55,19 +56,19 @@ node main.js [options]
 
 ```bash
 # Generate resumes from a specific JSON file
-node main.js --data ./my-resume.json
+npm start --data ./my-resume.json
 
 # Generate resume only for English
-node main.js --language en
+npm start --language en
 
 # Use a specific template
-node main.js --template fancy
+npm start --template fancy
 
 # Save both HTML and PDF to custom directory
-node main.js --html --output ./my-resumes
+npm start --html --output ./my-resumes
 
 # Generate resumes skipping spell checking
-node main.js -d ./my-data.json --noSpellChecking
+npm start -d ./my-data.json --noSpellChecking
 ```
 
 ## Data Structure
