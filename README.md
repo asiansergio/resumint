@@ -22,7 +22,7 @@ npx puppeteer browsers install chrome
 # Run the tool
 npm start [options]
 ```
-> ℹ️ Working to getting rid of all dependencies
+> ℹ️ Working to getting rid of most dependencies
 
 ## Quick Start
 
