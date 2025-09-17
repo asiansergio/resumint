@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import cli from "./src/cli.js";
-import template from "./src/template.js";
-import { createGenerator } from "./src/generator.js";
+import cli from "./cli.js";
+import template from "./template.js";
+import { createGenerator } from "./generator.js";
+import { getErrorMessage } from "./utils.js";
 
 async function main() {
   try {
@@ -18,7 +19,7 @@ async function main() {
 
     await generator.generateResumes(argv);
   } catch (error) {
-    console.error("Error:", error.message);
+    getErrorMessage(error);
     process.exit(1);
   }
 }

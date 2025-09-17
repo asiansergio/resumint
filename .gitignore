@@ -9,6 +9,7 @@ yarn.lock
 dist/
 build/
 output/
+types/
 *.pdf
 
 # Environment
