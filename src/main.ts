@@ -7,7 +7,7 @@ import { getErrorMessage } from "./utils.js";
 
 async function main() {
   try {
-    const argv = cli.parseArguments();
+    const argv = await cli.parseArguments();
     template.registerHelpers();
 
     // Create a custom generator instance with custom configuration if needed
@@ -17,7 +17,7 @@ async function main() {
       // logger: createLogger(console),
     });
 
-    await generator.generateResumes(argv);
+    await generator.generateResumes(argv as any);
   } catch (error) {
     getErrorMessage(error);
     process.exit(1);

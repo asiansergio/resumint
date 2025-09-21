@@ -102,3 +102,92 @@ export interface SpellCheckerModuleOptions {
   dictionaryManager?: DictionaryManager;
   logger?: typeof console;
 }
+
+// Generator related types
+export interface GeneratorConfig {
+  A4_HEIGHT_PX: number;
+  DATE_FORMAT: string;
+}
+
+export interface ResumeBasicInfo {
+  name: string;
+  [key: string]: any;
+}
+
+export interface ResumeMetadata {
+  template?: string;
+  [key: string]: any;
+}
+
+export interface ResumeData {
+  basic: ResumeBasicInfo;
+  metadata?: ResumeMetadata;
+  languages: string[];
+  [key: string]: any;
+}
+
+export interface CommandLineArgs {
+  data: string;
+  template?: string | undefined;
+  templatesDir: string;
+  output: string;
+  language?: string | undefined;
+  html?: boolean;
+  htmlOnly?: boolean;
+  noSpellCheck?: boolean;
+  // Allow additional properties from yargs
+  [key: string]: any;
+}
+
+export interface GenerationContext {
+  resumeData: ResumeData;
+  templatePath: string;
+  outputDir: string;
+  argv: CommandLineArgs;
+}
+
+export interface HTMLGenerator {
+  generate(data: ResumeData, language: string, templatePath: string): string;
+}
+
+export interface PDFGenerator {
+  generate(htmlPath: string, outputPath: string): Promise<void>;
+  isValidHeight(page: any): Promise<boolean>;
+}
+
+export interface PuppeteerModule {
+  launch(): Promise<any>;
+}
+
+export interface PathModule {
+  resolve(...paths: string[]): string;
+  join(...paths: string[]): string;
+}
+
+export interface UtilsModule {
+  getCurrentDate(): string;
+}
+
+export interface Generator {
+  generateResumes(argv: CommandLineArgs): Promise<void>;
+  getResumeData(dataPath: string): ResumeData;
+  getTemplatePath(argv: CommandLineArgs, resumeData: ResumeData): string;
+  ensureTemplateExists(templatePath: string): void;
+  getOrCreateOutputDirectory(dirName: string): string;
+  getLanguagesToGenerate(argv: CommandLineArgs, resumeData: ResumeData): string[];
+  ensureAtLeastOneLanguageIsSpecified(languages: string[]): void;
+  generateResumeForLanguage(context: GenerationContext, language: string): Promise<void>;
+  htmlGenerator: HTMLGenerator;
+  pdfGenerator: PDFGenerator;
+}
+
+export interface GeneratorDependencies {
+  fileOps?: FileOperations;
+  htmlGenerator?: HTMLGenerator;
+  pdfGenerator?: PDFGenerator;
+  spellCheckerModule?: any;
+  logger?: Logger;
+  path?: PathModule;
+  process?: any;
+  utils?: UtilsModule;
+}

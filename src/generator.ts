@@ -3,14 +3,30 @@ import pkg from "handlebars";
 import { launch } from "puppeteer";
 import { getCurrentDate, createFileOperations, createLogger, withErrorHandling } from "./utils.js";
 import spellChecker from "./spell-checker.js";
+import type {
+  GeneratorConfig,
+  ResumeData,
+  CommandLineArgs,
+  GenerationContext,
+  HTMLGenerator,
+  PDFGenerator,
+  PuppeteerModule,
+  PathModule,
+  Generator,
+  GeneratorDependencies,
+  FileOperations
+} from "./models.js";
 
-const defaultConfig = {
+const defaultConfig: GeneratorConfig = {
   A4_HEIGHT_PX: 1123,
   DATE_FORMAT: "YYYYMMDD"
 };
 
-const createHTMLGenerator = (handlebars = pkg, fileOps = createFileOperations()) => ({
-  generate(data, language, templatePath) {
+const createHTMLGenerator = (
+  handlebars = pkg,
+  fileOps: FileOperations = createFileOperations()
+): HTMLGenerator => ({
+  generate(data: ResumeData, language: string, templatePath: string): string {
     const templateSource = fileOps.readFile(templatePath);
     const template = handlebars.compile(templateSource);
 
@@ -22,11 +38,11 @@ const createHTMLGenerator = (handlebars = pkg, fileOps = createFileOperations())
 });
 
 const createPDFGenerator = (
-  puppeteer = { launch },
-  path = { resolve },
-  config = defaultConfig
-) => ({
-  async generate(htmlPath, outputPath) {
+  puppeteer: PuppeteerModule = { launch },
+  path: PathModule = { resolve, join },
+  config: GeneratorConfig = defaultConfig
+): PDFGenerator => ({
+  async generate(htmlPath: string, outputPath: string): Promise<void> {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
 
@@ -49,7 +65,7 @@ const createPDFGenerator = (
     console.log(`PDF generated: ${outputPath}`);
   },
 
-  async isValidHeight(page) {
+  async isValidHeight(page: any): Promise<boolean> {
     const contentHeight = await page.evaluate(() => {
       const container = document.querySelector(".resume-container");
       if (!container) {
@@ -80,87 +96,89 @@ const createGenerator = ({
   path = { resolve, join },
   process = global.process,
   utils = { getCurrentDate }
-} = {}) => {
-  const getResumeData = (dataPath) => fileOps.readJSON(dataPath);
+}: GeneratorDependencies = {}): Generator => {
+  const getResumeData = (dataPath: string): ResumeData => fileOps!.readJSON(dataPath);
 
-  const getTemplatePath = (argv, resumeData) => {
+  const getTemplatePath = (argv: CommandLineArgs, resumeData: ResumeData): string => {
     const templateName = argv.template || resumeData.metadata?.template || "default";
-    return path.resolve(process.cwd(), argv.templatesDir, `${templateName}-template.html`);
+    return path!.resolve(process!.cwd(), argv.templatesDir, `${templateName}-template.html`);
   };
 
-  const ensureTemplateExists = (templatePath) => {
-    if (!fileOps.exists(templatePath)) {
-      logger.error(`Template not found: ${templatePath}`);
-      process.exit(1);
+  const ensureTemplateExists = (templatePath: string): void => {
+    if (!fileOps!.exists(templatePath)) {
+      logger!.error(`Template not found: ${templatePath}`);
+      process!.exit(1);
     }
   };
 
-  const getOrCreateOutputDirectory = (dirName) => {
-    const outputDir = path.resolve(process.cwd(), dirName);
+  const getOrCreateOutputDirectory = (dirName: string): string => {
+    const outputDir = path!.resolve(process!.cwd(), dirName);
 
-    if (!fileOps.exists(outputDir)) {
-      fileOps.createDir(outputDir);
+    if (!fileOps!.exists(outputDir)) {
+      fileOps!.createDir(outputDir);
     }
 
     return outputDir;
   };
 
-  const getLanguagesToGenerate = (argv, resumeData) =>
+  const getLanguagesToGenerate = (argv: CommandLineArgs, resumeData: ResumeData): string[] =>
     argv.language ? [argv.language] : resumeData.languages;
 
-  const ensureAtLeastOneLanguageIsSpecified = (languages) => {
+  const ensureAtLeastOneLanguageIsSpecified = (languages: string[]): void => {
     if (!languages || languages.length === 0) {
-      logger.error("No languages specified in resume data or via command line");
-      process.exit(1);
+      logger!.error("No languages specified in resume data or via command line");
+      process!.exit(1);
     }
   };
 
-  const spellCheckHtml = async (html, language) => {
-    const spellCheckResult = await spellCheckerModule.spellCheckHtml(html, language);
+  const spellCheckHtml = async (html: string, language: string): Promise<void> => {
+    const spellCheckResult = await spellCheckerModule!.spellCheckHtml(html, language);
 
     if (spellCheckResult.misspelledCount > 0) {
-      logger.warn(
+      logger!.warn(
         `Found ${spellCheckResult.misspelledCount} misspelled words in '${language}' resume:`
       );
-      spellCheckResult.misspelled.forEach(({ word, suggestions }) => {
-        logger.warn(`- "${word}" -> Suggestions: ${suggestions.join(", ")}`);
-      });
+      spellCheckResult.misspelled.forEach(
+        ({ word, suggestions }: { word: string; suggestions: string[] }) => {
+          logger!.warn(`- "${word}" -> Suggestions: ${suggestions.join(", ")}`);
+        }
+      );
     } else {
-      logger.log(`✓ No spelling errors found in ${language} resume`);
+      logger!.log(`✓ No spelling errors found in ${language} resume`);
     }
   };
 
   const generateResumeForLanguage = async (
-    { resumeData, templatePath, outputDir, argv },
-    language
-  ) => {
-    const currentDate = utils.getCurrentDate();
+    { resumeData, templatePath, outputDir, argv }: GenerationContext,
+    language: string
+  ): Promise<void> => {
+    const currentDate = utils!.getCurrentDate();
     const baseFileName = `${currentDate}-${language}-${resumeData.basic.name
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "")}`;
 
-    const html = htmlGenerator.generate(resumeData, language, templatePath);
-    const htmlPath = path.join(outputDir, `${baseFileName}.html`);
+    const html = htmlGenerator!.generate(resumeData, language, templatePath);
+    const htmlPath = path!.join(outputDir, `${baseFileName}.html`);
 
     if (!argv.noSpellCheck) {
       await spellCheckHtml(html, language);
     }
 
-    fileOps.writeFile(htmlPath, html);
-    logger.log(`HTML saved: ${htmlPath}`);
+    fileOps!.writeFile(htmlPath, html);
+    logger!.log(`HTML saved: ${htmlPath}`);
 
     if (!argv.htmlOnly) {
-      const pdfPath = path.join(outputDir, `${baseFileName}.pdf`);
-      await pdfGenerator.generate(htmlPath, pdfPath);
+      const pdfPath = path!.join(outputDir, `${baseFileName}.pdf`);
+      await pdfGenerator!.generate(htmlPath, pdfPath);
     }
 
     if (!argv.html && !argv.htmlOnly) {
-      fileOps.deleteFile(htmlPath);
+      fileOps!.deleteFile(htmlPath);
     }
   };
 
-  const generateResumes = async (argv) => {
+  const generateResumes = async (argv: CommandLineArgs): Promise<void> => {
     const resumeData = getResumeData(argv.data);
     const templatePath = getTemplatePath(argv, resumeData);
 
@@ -171,14 +189,14 @@ const createGenerator = ({
 
     ensureAtLeastOneLanguageIsSpecified(languages);
 
-    const context = { resumeData, templatePath, outputDir, argv };
+    const context: GenerationContext = { resumeData, templatePath, outputDir, argv };
     await Promise.all(languages.map((language) => generateResumeForLanguage(context, language)));
 
-    logger.log("\nResume generation completed successfully! 🚀");
+    logger!.log("\nResume generation completed successfully! 🚀");
   };
 
   return {
-    generateResumes: withErrorHandling(generateResumes, logger, process),
+    generateResumes: withErrorHandling(generateResumes, logger!, process!),
     getResumeData,
     getTemplatePath,
     ensureTemplateExists,
@@ -186,8 +204,8 @@ const createGenerator = ({
     getLanguagesToGenerate,
     ensureAtLeastOneLanguageIsSpecified,
     generateResumeForLanguage,
-    htmlGenerator,
-    pdfGenerator
+    htmlGenerator: htmlGenerator!,
+    pdfGenerator: pdfGenerator!
   };
 };
 
