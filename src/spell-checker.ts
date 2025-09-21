@@ -1,26 +1,39 @@
+// @ts-ignore - nspell doesn't have types
 import nspell from "nspell";
 import path from "path";
-import { createFileOperations } from "./utils.js";
+import { getErrorMessage, createFileOperations } from "./utils.js";
+import type {
+  SpellCheckerConfig,
+  AvailableDictionaries,
+  MisspelledWord,
+  SpellCheckResult,
+  SpellInstance,
+  TextProcessor,
+  DictionaryManager,
+  SpellChecker,
+  SpellCheckerModuleOptions
+} from "./models.js";
 
-const defaultConfig = {
+const defaultConfig: SpellCheckerConfig = {
   DICTIONARIES_DIR: "dictionaries",
   WHITELIST_DIR: "whitelist",
-  MAX_SUGGESTIONS: 5
+  MAX_SUGGESTIONS: 5,
+  FILE_ENCODING: "utf8" as BufferEncoding
 };
 
-const createTextProcessor = () => ({
-  extractTextFromHtml(html) {
+const createTextProcessor = (): TextProcessor => ({
+  extractTextFromHtml(html: string) {
     const cleanedHtml = this.removeScriptAndStyleElements(html);
     const rawText = this.removeHtmlTagsAndEntities(cleanedHtml);
     return this.normalizeWhitespaces(rawText);
   },
 
-  removeScriptAndStyleElements(html) {
+  removeScriptAndStyleElements(html: string) {
     const text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
     return text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
   },
 
-  removeHtmlTagsAndEntities(text) {
+  removeHtmlTagsAndEntities(text: string) {
     let parsedText = text.replace(/<[^>]*>/g, " ");
     parsedText = parsedText.replace(/&nbsp;/g, " ");
     parsedText = parsedText.replace(/&amp;/g, "&");
@@ -29,21 +42,21 @@ const createTextProcessor = () => ({
     return parsedText;
   },
 
-  normalizeWhitespaces(text) {
+  normalizeWhitespaces(text: string) {
     return text.replace(/\s+/g, " ").trim();
   },
 
-  cleanWord(word) {
+  cleanWord(word: string) {
     // Remove punctuation from start and end of word
     return word.replace(/^[.,!?;:()[\]{}\-—–""'']+|[.,!?;:()[\]{}\-—–""'']+$/g, "");
   },
 
-  extractWords(text) {
+  extractWords(text: string) {
     // Split on whitespace and filter out empty strings
     return text.split(/\s+/).filter(Boolean);
   },
 
-  isWordToSkip(word) {
+  isWordToSkip(word: string) {
     // Skip if contains numbers
     if (/[0-9]/.test(word)) {
       return true;
@@ -65,15 +78,15 @@ const createTextProcessor = () => ({
 });
 
 const createDictionaryManager = (
-  fileOps = createFileOperations(defaultConfig.FILE_ENCODING),
+  fileOps = createFileOperations(defaultConfig.FILE_ENCODING || ("utf8" as BufferEncoding)),
   pathModule = path,
-  config = defaultConfig,
+  config: SpellCheckerConfig = defaultConfig,
   logger = console
-) => {
-  const dictionaryCache = {};
+): DictionaryManager => {
+  const dictionaryCache: { [language: string]: SpellInstance } = {};
 
   return {
-    async getAvailableDictionaries() {
+    async getAvailableDictionaries(): Promise<AvailableDictionaries> {
       const dictionariesDir = config.DICTIONARIES_DIR
         ? pathModule.join(process.cwd(), config.DICTIONARIES_DIR)
         : process.cwd();
@@ -87,7 +100,7 @@ const createDictionaryManager = (
 
         return files
           .filter((file) => file.endsWith(".dic"))
-          .reduce((acc, file) => {
+          .reduce((acc: AvailableDictionaries, file) => {
             const lang = file.split(".")[0];
             const affFile = `${lang}.aff`;
 
@@ -101,12 +114,12 @@ const createDictionaryManager = (
             return acc;
           }, {});
       } catch (error) {
-        logger.error(`Error loading dictionaries: ${error.message}`);
+        logger.error(`Error loading dictionaries: ${getErrorMessage(error)}`);
         return {};
       }
     },
 
-    async getDictionary(language, nspellModule = nspell) {
+    async getDictionary(language: string, nspellModule = nspell): Promise<SpellInstance> {
       if (dictionaryCache[language]) {
         return dictionaryCache[language];
       }
@@ -125,12 +138,12 @@ const createDictionaryManager = (
           dictionaryCache[language] = spell;
           return spell;
         } catch (error) {
-          logger.error(`Error loading dictionary for ${language}: ${error.message}`);
+          logger.error(`Error loading dictionary for ${language}: ${getErrorMessage(error)}`);
         }
       }
 
       logger.log(`No dictionaries found, creating empty dictionary for '${language}' resume`);
-      const dummySpell = {
+      const dummySpell: SpellInstance = {
         correct: () => true, // All words are correct
         suggest: () => [], // No suggestions
         add: () => {} // No-op for adding words
@@ -139,7 +152,7 @@ const createDictionaryManager = (
       return dummySpell;
     },
 
-    async addWhitelistedTerms(spell, language) {
+    async addWhitelistedTerms(spell: SpellInstance, language: string): Promise<void> {
       try {
         const whitelistDirPath = pathModule.join(
           process.cwd(),
@@ -177,7 +190,7 @@ const createDictionaryManager = (
             terms.forEach((term) => spell.add(term));
           });
       } catch (error) {
-        logger.error(`Error loading whitelist: ${error.message}`);
+        logger.error(`Error loading whitelist: ${getErrorMessage(error)}`);
       }
     },
 
@@ -188,17 +201,17 @@ const createDictionaryManager = (
 };
 
 const createSpellChecker = (
-  dictionaryManager = createDictionaryManager(),
-  textProcessor = createTextProcessor(),
-  config = defaultConfig,
+  dictionaryManager: DictionaryManager = createDictionaryManager(),
+  textProcessor: TextProcessor = createTextProcessor(),
+  config: SpellCheckerConfig = defaultConfig,
   logger = console
-) => ({
-  async spellCheckHtml(html, language) {
+): SpellChecker => ({
+  async spellCheckHtml(html: string, language: string): Promise<SpellCheckResult> {
     try {
       const spell = await dictionaryManager.getDictionary(language);
       const text = textProcessor.extractTextFromHtml(html);
       const words = textProcessor.extractWords(text);
-      const misspelled = [];
+      const misspelled: MisspelledWord[] = [];
 
       words.forEach((rawWord) => {
         const cleanedWord = textProcessor.cleanWord(rawWord);
@@ -223,10 +236,11 @@ const createSpellChecker = (
         text
       };
     } catch (error) {
-      logger.error(`Spell check error: ${error.message}`);
+      const errorMessage = getErrorMessage(error);
+      logger.error(`Spell check error: ${errorMessage}`);
       return {
         language,
-        error: error.message,
+        error: errorMessage,
         misspelledCount: 0,
         misspelled: []
       };
@@ -234,9 +248,10 @@ const createSpellChecker = (
   }
 });
 
-const createSpellCheckerModule = (options = {}) => {
+const createSpellCheckerModule = (options: SpellCheckerModuleOptions = {}) => {
   const config = { ...defaultConfig, ...options.config };
-  const fileOps = options.fileOps || createFileOperations(config.FILE_ENCODING);
+  const fileOps =
+    options.fileOps || createFileOperations(config.FILE_ENCODING || ("utf8" as BufferEncoding));
   const textProcessor = options.textProcessor || createTextProcessor();
   const dictionaryManager = options.dictionaryManager || createDictionaryManager(fileOps);
   const logger = options.logger || console;
@@ -263,3 +278,14 @@ export {
   createDictionaryManager,
   createSpellChecker
 };
+
+// Re-export types from models.ts for external use
+export type {
+  SpellCheckerConfig,
+  DictionaryManager,
+  TextProcessor,
+  SpellCheckResult,
+  MisspelledWord,
+  SpellInstance,
+  SpellCheckerModuleOptions
+} from "./models.js";
