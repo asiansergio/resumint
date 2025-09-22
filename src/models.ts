@@ -1,5 +1,4 @@
 // Essential types for spell checker module only
-// Generator types are now inlined
 
 export interface SpellCheckerConfig {
   DICTIONARIES_DIR: string;
@@ -56,3 +55,4 @@ export interface SpellCheckerModuleOptions {
   dictionaryManager?: DictionaryManager;
   logger?: typeof console;
 }
+

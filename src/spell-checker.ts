@@ -14,7 +14,6 @@ import type {
   SpellCheckerModuleOptions
 } from "./models.js";
 
-// Utility functions (moved from utils.ts)
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
