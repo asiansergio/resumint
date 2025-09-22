@@ -1,10 +1,10 @@
 // @ts-ignore - nspell doesn't have types
 import nspell from "nspell";
 import path from "path";
-import { getErrorMessage, createFileOperations } from "./utils.js";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
+import { readdir } from "fs/promises";
 import type {
   SpellCheckerConfig,
-  AvailableDictionaries,
   MisspelledWord,
   SpellCheckResult,
   SpellInstance,
@@ -13,6 +13,52 @@ import type {
   SpellChecker,
   SpellCheckerModuleOptions
 } from "./models.js";
+
+// Utility functions (moved from utils.ts)
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+interface FileOperations {
+  readJSON(path: string): any;
+  readFile(path: string): string;
+  writeFile(path: string, content: string): void;
+  exists(path: string): boolean;
+  createDir(path: string): void;
+  deleteFile(path: string): void;
+  readDir(path: string): Promise<string[]>;
+}
+
+interface AvailableDictionaries {
+  [language: string]: { dic: string; aff: string };
+}
+
+function createFileOperations(fileEncoding: BufferEncoding = "utf8"): FileOperations {
+  return {
+    readJSON(path: string): any {
+      return JSON.parse(readFileSync(path, fileEncoding));
+    },
+    readFile(path: string): string {
+      return readFileSync(path, fileEncoding);
+    },
+    writeFile(path: string, content: string): void {
+      writeFileSync(path, content);
+    },
+    exists(path: string): boolean {
+      return existsSync(path);
+    },
+    createDir(path: string): void {
+      mkdirSync(path, { recursive: true });
+    },
+    deleteFile(path: string): void {
+      unlinkSync(path);
+    },
+    async readDir(path: string): Promise<string[]> {
+      return readdir(path);
+    }
+  };
+}
 
 const defaultConfig: SpellCheckerConfig = {
   DICTIONARIES_DIR: "dictionaries",

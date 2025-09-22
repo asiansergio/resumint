@@ -1,222 +1,213 @@
 import { resolve, join } from "path";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdir } from "fs";
 import Handlebars from "handlebars";
 import { launch } from "puppeteer";
-import { getCurrentDate, createFileOperations, createLogger } from "./utils.js";
 import spellChecker from "./spell-checker.js";
-import type {
-  GeneratorConfig,
-  ResumeData,
-  CommandLineArgs,
-  SpellCheckResult
-} from "./models.js";
 
-const defaultConfig: GeneratorConfig = {
-  A4_HEIGHT_PX: 1123,
-  DATE_FORMAT: "YYYYMMDD"
-};
-
-class HTMLGenerator {
-  private fileOps = createFileOperations();
-
-  constructor() {
-    this.registerHandlebarsHelpers();
-  }
-
-  private registerHandlebarsHelpers(): void {
-    Handlebars.registerHelper("eq", (a, b) => a === b);
-    Handlebars.registerHelper("join", (array, separator) => array.join(separator));
-    Handlebars.registerHelper("getIcon", (type) => {
-      switch (type) {
-        case "email": return "mail-outline";
-        case "phone": return "call-outline";
-        case "github": return "logo-github";
-        case "linkedin": return "logo-linkedin";
-        case "location": return "location-outline";
-        default: return "";
-      }
-    });
-    Handlebars.registerHelper("lookup", (obj, field, subfield) => {
-      if (!obj || !field) return "";
-      if (typeof subfield === "string") return obj[field][subfield];
-      return obj[field] !== undefined ? obj[field] : obj;
-    });
-  }
-
-  generate(data: ResumeData, language: string, templatePath: string): string {
-    const templateSource = this.fileOps.readFile(templatePath);
-    const template = Handlebars.compile(templateSource);
-    return template({ ...data, language });
-  }
+// Types
+interface ResumeData {
+  basic: { name: string; [key: string]: any };
+  metadata?: { template?: string; [key: string]: any };
+  languages: string[];
+  [key: string]: any;
 }
 
-class PDFGenerator {
-  constructor(private config: GeneratorConfig = defaultConfig) {}
+interface CommandLineArgs {
+  data: string;
+  template?: string;
+  templatesDir: string;
+  output: string;
+  language?: string;
+  html?: boolean;
+  htmlOnly?: boolean;
+  noSpellCheck?: boolean;
+  [key: string]: any;
+}
 
-  async generate(htmlPath: string, outputPath: string): Promise<void> {
-    const browser = await launch();
-    const page = await browser.newPage();
+// Constants
+const A4_HEIGHT_PX = 1123;
 
-    const absoluteHtmlPath = `file://${resolve(htmlPath)}`;
-    await page.goto(absoluteHtmlPath, { waitUntil: "networkidle0" });
+// Utility functions
+function getCurrentDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}${month}${day}`;
+}
 
-    const isValid = await this.isValidHeight(page);
-    if (!isValid) {
-      console.error("Content height exceeds A4 threshold. PDF generation aborted.");
-      await browser.close();
-      return;
+function readJSON(path: string): any {
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+
+function log(message: string): void {
+  console.log(message);
+}
+
+function error(message: string): void {
+  console.error(message);
+}
+
+function warn(message: string): void {
+  console.warn(message);
+}
+
+// Register Handlebars helpers
+function setupHandlebars(): void {
+  Handlebars.registerHelper("eq", (a, b) => a === b);
+  Handlebars.registerHelper("join", (array, separator) => array.join(separator));
+  Handlebars.registerHelper("getIcon", (type) => {
+    switch (type) {
+      case "email": return "mail-outline";
+      case "phone": return "call-outline";
+      case "github": return "logo-github";
+      case "linkedin": return "logo-linkedin";
+      case "location": return "location-outline";
+      default: return "";
     }
+  });
+  Handlebars.registerHelper("lookup", (obj, field, subfield) => {
+    if (!obj || !field) return "";
+    if (typeof subfield === "string") return obj[field][subfield];
+    return obj[field] !== undefined ? obj[field] : obj;
+  });
+}
 
-    await page.pdf({
-      path: outputPath,
-      format: "A4",
-      margin: { top: "0", right: "0", bottom: "0", left: "0" }
-    });
+// HTML Generation
+function generateHTML(data: ResumeData, language: string, templatePath: string): string {
+  const templateSource = readFileSync(templatePath, "utf8");
+  const template = Handlebars.compile(templateSource);
+  return template({ ...data, language });
+}
 
+// PDF Generation
+async function generatePDF(htmlPath: string, outputPath: string): Promise<void> {
+  const browser = await launch();
+  const page = await browser.newPage();
+
+  const absoluteHtmlPath = `file://${resolve(htmlPath)}`;
+  await page.goto(absoluteHtmlPath, { waitUntil: "networkidle0" });
+
+  // Validate height
+  const contentHeight = await page.evaluate(() => {
+    const container = document.querySelector(".resume-container");
+    if (!container) {
+      console.warn("Resume container not found, using body height");
+      return document.body.scrollHeight;
+    }
+    return container.scrollHeight;
+  });
+
+  if (contentHeight > A4_HEIGHT_PX) {
+    console.log(`Content height (${contentHeight}px) exceeds A4 maximum (${A4_HEIGHT_PX}px)`);
+    error("Content height exceeds A4 threshold. PDF generation aborted.");
     await browser.close();
-    console.log(`PDF generated: ${outputPath}`);
+    return;
   }
 
-  private async isValidHeight(page: any): Promise<boolean> {
-    const contentHeight = await page.evaluate(() => {
-      const container = document.querySelector(".resume-container");
-      if (!container) {
-        console.warn("Resume container not found, using body height");
-        return document.body.scrollHeight;
-      }
-      return container.scrollHeight;
+  await page.pdf({
+    path: outputPath,
+    format: "A4",
+    margin: { top: "0", right: "0", bottom: "0", left: "0" }
+  });
+
+  await browser.close();
+  log(`PDF generated: ${outputPath}`);
+}
+
+// Spell checking
+async function spellCheckHTML(html: string, language: string): Promise<void> {
+  const result = await spellChecker.spellCheckHtml(html, language);
+
+  if (result.misspelledCount > 0) {
+    warn(`Found ${result.misspelledCount} misspelled words in '${language}' resume:`);
+    result.misspelled.forEach(({ word, suggestions }) => {
+      warn(`- "${word}" -> Suggestions: ${suggestions.join(", ")}`);
     });
-
-    const isHeightValid = contentHeight <= this.config.A4_HEIGHT_PX;
-
-    if (!isHeightValid) {
-      console.log(
-        `Content height (${contentHeight}px) exceeds A4 maximum (${this.config.A4_HEIGHT_PX}px)`
-      );
-    }
-
-    return isHeightValid;
+  } else {
+    log(`✓ No spelling errors found in ${language} resume`);
   }
 }
 
-export class ResumeGenerator {
-  private fileOps = createFileOperations();
-  private logger = createLogger();
-  private htmlGenerator = new HTMLGenerator();
-  private pdfGenerator = new PDFGenerator();
+// Main resume generation logic
+async function generateResumeForLanguage(
+  resumeData: ResumeData,
+  templatePath: string,
+  outputDir: string,
+  argv: CommandLineArgs,
+  language: string
+): Promise<void> {
+  const currentDate = getCurrentDate();
+  const baseFileName = `${currentDate}-${language}-${resumeData.basic.name
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")}`;
 
-  async generateResumes(argv: CommandLineArgs): Promise<void> {
-    try {
-      const resumeData = this.getResumeData(argv.data);
-      const templatePath = this.getTemplatePath(argv, resumeData);
+  const html = generateHTML(resumeData, language, templatePath);
+  const htmlPath = join(outputDir, `${baseFileName}.html`);
 
-      this.ensureTemplateExists(templatePath);
-
-      const outputDir = this.getOrCreateOutputDirectory(argv.output);
-      const languages = this.getLanguagesToGenerate(argv, resumeData);
-
-      this.ensureAtLeastOneLanguageIsSpecified(languages);
-
-      await Promise.all(
-        languages.map((language) =>
-          this.generateResumeForLanguage(resumeData, templatePath, outputDir, argv, language)
-        )
-      );
-
-      this.logger.log("\nResume generation completed successfully! 🚀");
-    } catch (error) {
-      this.logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
-      process.exit(1);
-    }
+  if (!argv.noSpellCheck) {
+    await spellCheckHTML(html, language);
   }
 
-  private getResumeData(dataPath: string): ResumeData {
-    return this.fileOps.readJSON(dataPath);
+  writeFileSync(htmlPath, html);
+  log(`HTML saved: ${htmlPath}`);
+
+  if (!argv.htmlOnly) {
+    const pdfPath = join(outputDir, `${baseFileName}.pdf`);
+    await generatePDF(htmlPath, pdfPath);
   }
 
-  private getTemplatePath(argv: CommandLineArgs, resumeData: ResumeData): string {
+  if (!argv.html && !argv.htmlOnly) {
+    unlinkSync(htmlPath);
+  }
+}
+
+// Main generator function
+export async function generateResumes(argv: CommandLineArgs): Promise<void> {
+  try {
+    // Setup
+    setupHandlebars();
+
+    // Read resume data
+    const resumeData: ResumeData = readJSON(argv.data);
+
+    // Get template path
     const templateName = argv.template || resumeData.metadata?.template || "default";
-    return resolve(process.cwd(), argv.templatesDir, `${templateName}-template.html`);
-  }
+    const templatePath = resolve(process.cwd(), argv.templatesDir, `${templateName}-template.html`);
 
-  private ensureTemplateExists(templatePath: string): void {
-    if (!this.fileOps.exists(templatePath)) {
-      this.logger.error(`Template not found: ${templatePath}`);
+    // Validate template exists
+    if (!existsSync(templatePath)) {
+      error(`Template not found: ${templatePath}`);
       process.exit(1);
     }
-  }
 
-  private getOrCreateOutputDirectory(dirName: string): string {
-    const outputDir = resolve(process.cwd(), dirName);
-
-    if (!this.fileOps.exists(outputDir)) {
-      this.fileOps.createDir(outputDir);
+    // Create output directory
+    const outputDir = resolve(process.cwd(), argv.output);
+    if (!existsSync(outputDir)) {
+      mkdirSync(outputDir, { recursive: true });
     }
 
-    return outputDir;
-  }
-
-  private getLanguagesToGenerate(argv: CommandLineArgs, resumeData: ResumeData): string[] {
-    return argv.language ? [argv.language] : resumeData.languages;
-  }
-
-  private ensureAtLeastOneLanguageIsSpecified(languages: string[]): void {
+    // Determine languages
+    const languages = argv.language ? [argv.language] : resumeData.languages;
     if (!languages || languages.length === 0) {
-      this.logger.error("No languages specified in resume data or via command line");
+      error("No languages specified in resume data or via command line");
       process.exit(1);
     }
-  }
 
-  private async spellCheckHtml(html: string, language: string): Promise<void> {
-    const spellCheckResult: SpellCheckResult = await spellChecker.spellCheckHtml(html, language);
+    // Generate resumes for all languages
+    await Promise.all(
+      languages.map((language) =>
+        generateResumeForLanguage(resumeData, templatePath, outputDir, argv, language)
+      )
+    );
 
-    if (spellCheckResult.misspelledCount > 0) {
-      this.logger.warn(
-        `Found ${spellCheckResult.misspelledCount} misspelled words in '${language}' resume:`
-      );
-      spellCheckResult.misspelled.forEach(({ word, suggestions }) => {
-        this.logger.warn(`- "${word}" -> Suggestions: ${suggestions.join(", ")}`);
-      });
-    } else {
-      this.logger.log(`✓ No spelling errors found in ${language} resume`);
-    }
-  }
-
-  private async generateResumeForLanguage(
-    resumeData: ResumeData,
-    templatePath: string,
-    outputDir: string,
-    argv: CommandLineArgs,
-    language: string
-  ): Promise<void> {
-    const currentDate = getCurrentDate();
-    const baseFileName = `${currentDate}-${language}-${resumeData.basic.name
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "")}`;
-
-    const html = this.htmlGenerator.generate(resumeData, language, templatePath);
-    const htmlPath = join(outputDir, `${baseFileName}.html`);
-
-    if (!argv.noSpellCheck) {
-      await this.spellCheckHtml(html, language);
-    }
-
-    this.fileOps.writeFile(htmlPath, html);
-    this.logger.log(`HTML saved: ${htmlPath}`);
-
-    if (!argv.htmlOnly) {
-      const pdfPath = join(outputDir, `${baseFileName}.pdf`);
-      await this.pdfGenerator.generate(htmlPath, pdfPath);
-    }
-
-    if (!argv.html && !argv.htmlOnly) {
-      this.fileOps.deleteFile(htmlPath);
-    }
+    log("\nResume generation completed successfully! 🚀");
+  } catch (err) {
+    error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
   }
 }
 
-// Create a default instance for backward compatibility
-const defaultGenerator = new ResumeGenerator();
-
-export default defaultGenerator;
-export { defaultGenerator as generator };
+// Default export for backward compatibility
+export default { generateResumes };
