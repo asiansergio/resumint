@@ -215,7 +215,7 @@ const createDictionaryManager = (
         whitelistFiles
           .filter((file) => file.endsWith(".txt"))
           .forEach((file) => {
-            const filePath = pathModule.join(whitelistDirPath, file);
+            const path = pathModule.join(whitelistDirPath, file);
 
             // Check if this is a language-specific whitelist
             // Format: whitelist-en.txt, whitelist-es.txt, etc.
@@ -226,7 +226,7 @@ const createDictionaryManager = (
               return;
             }
 
-            const content = fileOps.readFile(filePath);
+            const content = fileOps.readFile(path);
             const terms = content
               .split("\n")
               .map((term) => term.trim().toLowerCase())
@@ -295,8 +295,7 @@ const createSpellChecker = (
 
 const createSpellCheckerModule = (options: SpellCheckerModuleOptions = {}) => {
   const config = { ...defaultConfig, ...options.config };
-  const fileOps =
-    options.fileOps || createFileOperations(config.FILE_ENCODING || ("utf8" as BufferEncoding));
+  const fileOps = options.fileOps || createFileOperations(config.FILE_ENCODING || ("utf8" as BufferEncoding));
   const textProcessor = options.textProcessor || createTextProcessor();
   const dictionaryManager = options.dictionaryManager || createDictionaryManager(fileOps);
   const logger = options.logger || console;

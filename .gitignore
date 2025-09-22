@@ -63,3 +63,5 @@ dictionaries/*
 !dictionaries/en.aff
 !dictionaries/en.dic
 !dictionaries/whitelist
+
+.claude/

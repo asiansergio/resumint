@@ -1,5 +1,5 @@
 import { resolve, join } from "path";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdir } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
 import Handlebars from "handlebars";
 import { launch } from "puppeteer";
 import spellChecker from "./spell-checker.js";
@@ -216,4 +216,3 @@ export async function generateResumes(argv: CommandLineArgs): Promise<void> {
 }
 
 export default { generateResumes };
-

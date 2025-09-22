@@ -5,10 +5,20 @@
     "es2021": true,
     "node": true
   },
-  "extends": ["airbnb-base", "prettier"],
+  "extends": ["prettier"],
+  "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "ecmaVersion": "latest"
+    "ecmaVersion": "latest",
+    "sourceType": "module"
   },
+  "plugins": ["@typescript-eslint"],
+  "ignorePatterns": ["dist/", "types/", "node_modules/"],
+  "overrides": [
+    {
+      "files": ["**/*.ts"],
+      "rules": {}
+    }
+  ],
   "rules": {
     "no-confusing-arrow": "off",
     "no-console": "off",
@@ -21,17 +31,6 @@
       "error",
       {
         "ImportDeclaration": { "consistent": true }
-      }
-    ],
-    "import/extensions": [
-      "error",
-      "ignorePackages",
-      {
-        "js": "always",
-        "mjs": "always",
-        "jsx": "always",
-        "ts": "always",
-        "tsx": "always"
       }
     ]
   }
