@@ -1,20 +1,13 @@
 import { resolve, join } from "path";
-import pkg from "handlebars";
+import Handlebars from "handlebars";
 import { launch } from "puppeteer";
-import { getCurrentDate, createFileOperations, createLogger, withErrorHandling } from "./utils.js";
+import { getCurrentDate, createFileOperations, createLogger } from "./utils.js";
 import spellChecker from "./spell-checker.js";
 import type {
   GeneratorConfig,
   ResumeData,
   CommandLineArgs,
-  GenerationContext,
-  HTMLGenerator,
-  PDFGenerator,
-  PuppeteerModule,
-  PathModule,
-  Generator,
-  GeneratorDependencies,
-  FileOperations
+  SpellCheckResult
 } from "./models.js";
 
 const defaultConfig: GeneratorConfig = {
@@ -22,37 +15,55 @@ const defaultConfig: GeneratorConfig = {
   DATE_FORMAT: "YYYYMMDD"
 };
 
-const createHTMLGenerator = (
-  handlebars = pkg,
-  fileOps: FileOperations = createFileOperations()
-): HTMLGenerator => ({
-  generate(data: ResumeData, language: string, templatePath: string): string {
-    const templateSource = fileOps.readFile(templatePath);
-    const template = handlebars.compile(templateSource);
+class HTMLGenerator {
+  private fileOps = createFileOperations();
 
-    return template({
-      ...data,
-      language
+  constructor() {
+    this.registerHandlebarsHelpers();
+  }
+
+  private registerHandlebarsHelpers(): void {
+    Handlebars.registerHelper("eq", (a, b) => a === b);
+    Handlebars.registerHelper("join", (array, separator) => array.join(separator));
+    Handlebars.registerHelper("getIcon", (type) => {
+      switch (type) {
+        case "email": return "mail-outline";
+        case "phone": return "call-outline";
+        case "github": return "logo-github";
+        case "linkedin": return "logo-linkedin";
+        case "location": return "location-outline";
+        default: return "";
+      }
+    });
+    Handlebars.registerHelper("lookup", (obj, field, subfield) => {
+      if (!obj || !field) return "";
+      if (typeof subfield === "string") return obj[field][subfield];
+      return obj[field] !== undefined ? obj[field] : obj;
     });
   }
-});
 
-const createPDFGenerator = (
-  puppeteer: PuppeteerModule = { launch },
-  path: PathModule = { resolve, join },
-  config: GeneratorConfig = defaultConfig
-): PDFGenerator => ({
+  generate(data: ResumeData, language: string, templatePath: string): string {
+    const templateSource = this.fileOps.readFile(templatePath);
+    const template = Handlebars.compile(templateSource);
+    return template({ ...data, language });
+  }
+}
+
+class PDFGenerator {
+  constructor(private config: GeneratorConfig = defaultConfig) {}
+
   async generate(htmlPath: string, outputPath: string): Promise<void> {
-    const browser = await puppeteer.launch();
+    const browser = await launch();
     const page = await browser.newPage();
 
-    const absoluteHtmlPath = `file://${path.resolve(htmlPath)}`;
+    const absoluteHtmlPath = `file://${resolve(htmlPath)}`;
     await page.goto(absoluteHtmlPath, { waitUntil: "networkidle0" });
 
     const isValid = await this.isValidHeight(page);
     if (!isValid) {
       console.error("Content height exceeds A4 threshold. PDF generation aborted.");
       await browser.close();
+      return;
     }
 
     await page.pdf({
@@ -63,9 +74,9 @@ const createPDFGenerator = (
 
     await browser.close();
     console.log(`PDF generated: ${outputPath}`);
-  },
+  }
 
-  async isValidHeight(page: any): Promise<boolean> {
+  private async isValidHeight(page: any): Promise<boolean> {
     const contentHeight = await page.evaluate(() => {
       const container = document.querySelector(".resume-container");
       if (!container) {
@@ -75,152 +86,137 @@ const createPDFGenerator = (
       return container.scrollHeight;
     });
 
-    const isHeightValid = contentHeight <= config.A4_HEIGHT_PX;
+    const isHeightValid = contentHeight <= this.config.A4_HEIGHT_PX;
 
     if (!isHeightValid) {
       console.log(
-        `Content height (${contentHeight}px) exceeds A4 maximum (${config.A4_HEIGHT_PX}px)`
+        `Content height (${contentHeight}px) exceeds A4 maximum (${this.config.A4_HEIGHT_PX}px)`
       );
     }
 
     return isHeightValid;
   }
-});
+}
 
-const createGenerator = ({
-  fileOps = createFileOperations(),
-  htmlGenerator = createHTMLGenerator(),
-  pdfGenerator = createPDFGenerator(),
-  spellCheckerModule = spellChecker,
-  logger = createLogger(),
-  path = { resolve, join },
-  process = global.process,
-  utils = { getCurrentDate }
-}: GeneratorDependencies = {}): Generator => {
-  const getResumeData = (dataPath: string): ResumeData => fileOps!.readJSON(dataPath);
+export class ResumeGenerator {
+  private fileOps = createFileOperations();
+  private logger = createLogger();
+  private htmlGenerator = new HTMLGenerator();
+  private pdfGenerator = new PDFGenerator();
 
-  const getTemplatePath = (argv: CommandLineArgs, resumeData: ResumeData): string => {
-    const templateName = argv.template || resumeData.metadata?.template || "default";
-    return path!.resolve(process!.cwd(), argv.templatesDir, `${templateName}-template.html`);
-  };
+  async generateResumes(argv: CommandLineArgs): Promise<void> {
+    try {
+      const resumeData = this.getResumeData(argv.data);
+      const templatePath = this.getTemplatePath(argv, resumeData);
 
-  const ensureTemplateExists = (templatePath: string): void => {
-    if (!fileOps!.exists(templatePath)) {
-      logger!.error(`Template not found: ${templatePath}`);
-      process!.exit(1);
+      this.ensureTemplateExists(templatePath);
+
+      const outputDir = this.getOrCreateOutputDirectory(argv.output);
+      const languages = this.getLanguagesToGenerate(argv, resumeData);
+
+      this.ensureAtLeastOneLanguageIsSpecified(languages);
+
+      await Promise.all(
+        languages.map((language) =>
+          this.generateResumeForLanguage(resumeData, templatePath, outputDir, argv, language)
+        )
+      );
+
+      this.logger.log("\nResume generation completed successfully! 🚀");
+    } catch (error) {
+      this.logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
     }
-  };
+  }
 
-  const getOrCreateOutputDirectory = (dirName: string): string => {
-    const outputDir = path!.resolve(process!.cwd(), dirName);
+  private getResumeData(dataPath: string): ResumeData {
+    return this.fileOps.readJSON(dataPath);
+  }
 
-    if (!fileOps!.exists(outputDir)) {
-      fileOps!.createDir(outputDir);
+  private getTemplatePath(argv: CommandLineArgs, resumeData: ResumeData): string {
+    const templateName = argv.template || resumeData.metadata?.template || "default";
+    return resolve(process.cwd(), argv.templatesDir, `${templateName}-template.html`);
+  }
+
+  private ensureTemplateExists(templatePath: string): void {
+    if (!this.fileOps.exists(templatePath)) {
+      this.logger.error(`Template not found: ${templatePath}`);
+      process.exit(1);
+    }
+  }
+
+  private getOrCreateOutputDirectory(dirName: string): string {
+    const outputDir = resolve(process.cwd(), dirName);
+
+    if (!this.fileOps.exists(outputDir)) {
+      this.fileOps.createDir(outputDir);
     }
 
     return outputDir;
-  };
+  }
 
-  const getLanguagesToGenerate = (argv: CommandLineArgs, resumeData: ResumeData): string[] =>
-    argv.language ? [argv.language] : resumeData.languages;
+  private getLanguagesToGenerate(argv: CommandLineArgs, resumeData: ResumeData): string[] {
+    return argv.language ? [argv.language] : resumeData.languages;
+  }
 
-  const ensureAtLeastOneLanguageIsSpecified = (languages: string[]): void => {
+  private ensureAtLeastOneLanguageIsSpecified(languages: string[]): void {
     if (!languages || languages.length === 0) {
-      logger!.error("No languages specified in resume data or via command line");
-      process!.exit(1);
+      this.logger.error("No languages specified in resume data or via command line");
+      process.exit(1);
     }
-  };
+  }
 
-  const spellCheckHtml = async (html: string, language: string): Promise<void> => {
-    const spellCheckResult = await spellCheckerModule!.spellCheckHtml(html, language);
+  private async spellCheckHtml(html: string, language: string): Promise<void> {
+    const spellCheckResult: SpellCheckResult = await spellChecker.spellCheckHtml(html, language);
 
     if (spellCheckResult.misspelledCount > 0) {
-      logger!.warn(
+      this.logger.warn(
         `Found ${spellCheckResult.misspelledCount} misspelled words in '${language}' resume:`
       );
-      spellCheckResult.misspelled.forEach(
-        ({ word, suggestions }: { word: string; suggestions: string[] }) => {
-          logger!.warn(`- "${word}" -> Suggestions: ${suggestions.join(", ")}`);
-        }
-      );
+      spellCheckResult.misspelled.forEach(({ word, suggestions }) => {
+        this.logger.warn(`- "${word}" -> Suggestions: ${suggestions.join(", ")}`);
+      });
     } else {
-      logger!.log(`✓ No spelling errors found in ${language} resume`);
+      this.logger.log(`✓ No spelling errors found in ${language} resume`);
     }
-  };
+  }
 
-  const generateResumeForLanguage = async (
-    { resumeData, templatePath, outputDir, argv }: GenerationContext,
+  private async generateResumeForLanguage(
+    resumeData: ResumeData,
+    templatePath: string,
+    outputDir: string,
+    argv: CommandLineArgs,
     language: string
-  ): Promise<void> => {
-    const currentDate = utils!.getCurrentDate();
+  ): Promise<void> {
+    const currentDate = getCurrentDate();
     const baseFileName = `${currentDate}-${language}-${resumeData.basic.name
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "")}`;
 
-    const html = htmlGenerator!.generate(resumeData, language, templatePath);
-    const htmlPath = path!.join(outputDir, `${baseFileName}.html`);
+    const html = this.htmlGenerator.generate(resumeData, language, templatePath);
+    const htmlPath = join(outputDir, `${baseFileName}.html`);
 
     if (!argv.noSpellCheck) {
-      await spellCheckHtml(html, language);
+      await this.spellCheckHtml(html, language);
     }
 
-    fileOps!.writeFile(htmlPath, html);
-    logger!.log(`HTML saved: ${htmlPath}`);
+    this.fileOps.writeFile(htmlPath, html);
+    this.logger.log(`HTML saved: ${htmlPath}`);
 
     if (!argv.htmlOnly) {
-      const pdfPath = path!.join(outputDir, `${baseFileName}.pdf`);
-      await pdfGenerator!.generate(htmlPath, pdfPath);
+      const pdfPath = join(outputDir, `${baseFileName}.pdf`);
+      await this.pdfGenerator.generate(htmlPath, pdfPath);
     }
 
     if (!argv.html && !argv.htmlOnly) {
-      fileOps!.deleteFile(htmlPath);
+      this.fileOps.deleteFile(htmlPath);
     }
-  };
+  }
+}
 
-  const generateResumes = async (argv: CommandLineArgs): Promise<void> => {
-    const resumeData = getResumeData(argv.data);
-    const templatePath = getTemplatePath(argv, resumeData);
+// Create a default instance for backward compatibility
+const defaultGenerator = new ResumeGenerator();
 
-    ensureTemplateExists(templatePath);
-
-    const outputDir = getOrCreateOutputDirectory(argv.output);
-    const languages = getLanguagesToGenerate(argv, resumeData);
-
-    ensureAtLeastOneLanguageIsSpecified(languages);
-
-    const context: GenerationContext = { resumeData, templatePath, outputDir, argv };
-    await Promise.all(languages.map((language) => generateResumeForLanguage(context, language)));
-
-    logger!.log("\nResume generation completed successfully! 🚀");
-  };
-
-  return {
-    generateResumes: withErrorHandling(generateResumes, logger!, process!),
-    getResumeData,
-    getTemplatePath,
-    ensureTemplateExists,
-    getOrCreateOutputDirectory,
-    getLanguagesToGenerate,
-    ensureAtLeastOneLanguageIsSpecified,
-    generateResumeForLanguage,
-    htmlGenerator: htmlGenerator!,
-    pdfGenerator: pdfGenerator!
-  };
-};
-
-export default createGenerator();
-
-export const {
-  getResumeData,
-  getTemplatePath,
-  ensureTemplateExists,
-  getOrCreateOutputDirectory,
-  getLanguagesToGenerate,
-  ensureAtLeastOneLanguageIsSpecified,
-  generateResumeForLanguage,
-  htmlGenerator,
-  pdfGenerator
-} = createGenerator();
-
-export { createGenerator };
+export default defaultGenerator;
+export { defaultGenerator as generator };

@@ -16,16 +16,7 @@ export const createLogger = (console: Console = global.console): Logger => ({
   warn: (...args: any[]) => console.warn(...args)
 });
 
-export const withErrorHandling =
-  <T extends (...args: any[]) => any>(fn: T, logger: Logger, process: Process = global.process) =>
-  async (...args: Parameters<T>): Promise<Awaited<ReturnType<T>>> => {
-    try {
-      return await fn(...args);
-    } catch (error) {
-      logger.error(`Error: ${getErrorMessage(error)}`);
-      process.exit(1);
-    }
-  };
+// Removed withErrorHandling - now handled directly in ResumeGenerator class
 
 export function createFileOperations(
   fileEncoding: BufferEncoding = "utf8",

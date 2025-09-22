@@ -146,48 +146,4 @@ export interface GenerationContext {
   argv: CommandLineArgs;
 }
 
-export interface HTMLGenerator {
-  generate(data: ResumeData, language: string, templatePath: string): string;
-}
-
-export interface PDFGenerator {
-  generate(htmlPath: string, outputPath: string): Promise<void>;
-  isValidHeight(page: any): Promise<boolean>;
-}
-
-export interface PuppeteerModule {
-  launch(): Promise<any>;
-}
-
-export interface PathModule {
-  resolve(...paths: string[]): string;
-  join(...paths: string[]): string;
-}
-
-export interface UtilsModule {
-  getCurrentDate(): string;
-}
-
-export interface Generator {
-  generateResumes(argv: CommandLineArgs): Promise<void>;
-  getResumeData(dataPath: string): ResumeData;
-  getTemplatePath(argv: CommandLineArgs, resumeData: ResumeData): string;
-  ensureTemplateExists(templatePath: string): void;
-  getOrCreateOutputDirectory(dirName: string): string;
-  getLanguagesToGenerate(argv: CommandLineArgs, resumeData: ResumeData): string[];
-  ensureAtLeastOneLanguageIsSpecified(languages: string[]): void;
-  generateResumeForLanguage(context: GenerationContext, language: string): Promise<void>;
-  htmlGenerator: HTMLGenerator;
-  pdfGenerator: PDFGenerator;
-}
-
-export interface GeneratorDependencies {
-  fileOps?: FileOperations;
-  htmlGenerator?: HTMLGenerator;
-  pdfGenerator?: PDFGenerator;
-  spellCheckerModule?: any;
-  logger?: Logger;
-  path?: PathModule;
-  process?: any;
-  utils?: UtilsModule;
-}
+// Removed unused generator interfaces - now using classes directly
