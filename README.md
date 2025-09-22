@@ -27,7 +27,7 @@ npm start [options]
 
 ```bash
 # Try the demo with example data
-npm run demo
+npm demo
 
 # Command to run directly with example data
 npm start -d ./data/example-data.json
