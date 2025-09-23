@@ -4,6 +4,8 @@ import path from "path";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
 import { readdir } from "fs/promises";
 import type {
+  FileOperations,
+  AvailableDictionaries,
   SpellCheckerConfig,
   MisspelledWord,
   SpellCheckResult,
@@ -12,26 +14,15 @@ import type {
   DictionaryManager,
   SpellChecker,
   SpellCheckerModuleOptions
-} from "./models.js";
+} from "./models/spell-checker.js";
+import { getErrorMessage } from "./utils.js";
 
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
-
-interface FileOperations {
-  readJSON(path: string): any;
-  readFile(path: string): string;
-  writeFile(path: string, content: string): void;
-  exists(path: string): boolean;
-  createDir(path: string): void;
-  deleteFile(path: string): void;
-  readDir(path: string): Promise<string[]>;
-}
-
-interface AvailableDictionaries {
-  [language: string]: { dic: string; aff: string };
-}
+const defaultConfig: SpellCheckerConfig = {
+  DICTIONARIES_DIR: "dictionaries",
+  WHITELIST_DIR: "whitelist",
+  MAX_SUGGESTIONS: 5,
+  FILE_ENCODING: "utf8" as BufferEncoding
+};
 
 function createFileOperations(fileEncoding: BufferEncoding = "utf8"): FileOperations {
   return {
@@ -59,75 +50,70 @@ function createFileOperations(fileEncoding: BufferEncoding = "utf8"): FileOperat
   };
 }
 
-const defaultConfig: SpellCheckerConfig = {
-  DICTIONARIES_DIR: "dictionaries",
-  WHITELIST_DIR: "whitelist",
-  MAX_SUGGESTIONS: 5,
-  FILE_ENCODING: "utf8" as BufferEncoding
-};
+function createTextProcessor(): TextProcessor {
+  return {
+    extractTextFromHtml(html: string) {
+      const cleanedHtml = this.removeScriptAndStyleElements(html);
+      const rawText = this.removeHtmlTagsAndEntities(cleanedHtml);
+      return this.normalizeWhitespaces(rawText);
+    },
 
-const createTextProcessor = (): TextProcessor => ({
-  extractTextFromHtml(html: string) {
-    const cleanedHtml = this.removeScriptAndStyleElements(html);
-    const rawText = this.removeHtmlTagsAndEntities(cleanedHtml);
-    return this.normalizeWhitespaces(rawText);
-  },
+    removeScriptAndStyleElements(html: string) {
+      const text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+      return text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
+    },
 
-  removeScriptAndStyleElements(html: string) {
-    const text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
-    return text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
-  },
+    removeHtmlTagsAndEntities(text: string) {
+      let parsedText = text.replace(/<[^>]*>/g, " ");
+      parsedText = parsedText.replace(/&nbsp;/g, " ");
+      parsedText = parsedText.replace(/&amp;/g, "&");
+      parsedText = parsedText.replace(/&lt;/g, "<");
+      parsedText = parsedText.replace(/&gt;/g, ">");
+      return parsedText;
+    },
 
-  removeHtmlTagsAndEntities(text: string) {
-    let parsedText = text.replace(/<[^>]*>/g, " ");
-    parsedText = parsedText.replace(/&nbsp;/g, " ");
-    parsedText = parsedText.replace(/&amp;/g, "&");
-    parsedText = parsedText.replace(/&lt;/g, "<");
-    parsedText = parsedText.replace(/&gt;/g, ">");
-    return parsedText;
-  },
+    normalizeWhitespaces(text: string) {
+      return text.replace(/\s+/g, " ").trim();
+    },
 
-  normalizeWhitespaces(text: string) {
-    return text.replace(/\s+/g, " ").trim();
-  },
+    cleanWord(word: string) {
+      // Remove punctuation from start and end of word
+      return word.replace(/^[.,!?;:()[\]{}\-—–""'']+|[.,!?;:()[\]{}\-—–""'']+$/g, "");
+    },
 
-  cleanWord(word: string) {
-    // Remove punctuation from start and end of word
-    return word.replace(/^[.,!?;:()[\]{}\-—–""'']+|[.,!?;:()[\]{}\-—–""'']+$/g, "");
-  },
+    extractWords(text: string) {
+      // Split on whitespace and filter out empty strings
+      return text.split(/\s+/).filter(Boolean);
+    },
 
-  extractWords(text: string) {
-    // Split on whitespace and filter out empty strings
-    return text.split(/\s+/).filter(Boolean);
-  },
+    isWordToSkip(word: string) {
+      // Skip if contains numbers
+      if (/[0-9]/.test(word)) {
+        return true;
+      }
 
-  isWordToSkip(word: string) {
-    // Skip if contains numbers
-    if (/[0-9]/.test(word)) {
-      return true;
+      // Skip if it's purely symbols/punctuation
+      if (!/[a-zA-ZÀ-ž]/.test(word)) {
+        return true;
+      }
+
+      // Skip very short cleaned words
+      const cleanedWord = this.cleanWord(word);
+      if (cleanedWord.length <= 1) {
+        return true;
+      }
+
+      return false;
     }
+  };
+}
 
-    // Skip if it's purely symbols/punctuation
-    if (!/[a-zA-ZÀ-ž]/.test(word)) {
-      return true;
-    }
-
-    // Skip very short cleaned words
-    const cleanedWord = this.cleanWord(word);
-    if (cleanedWord.length <= 1) {
-      return true;
-    }
-
-    return false;
-  }
-});
-
-const createDictionaryManager = (
+function createDictionaryManager(
   fileOps = createFileOperations(defaultConfig.FILE_ENCODING || ("utf8" as BufferEncoding)),
   pathModule = path,
   config: SpellCheckerConfig = defaultConfig,
   logger = console
-): DictionaryManager => {
+): DictionaryManager {
   const dictionaryCache: { [language: string]: SpellInstance } = {};
 
   return {
@@ -243,59 +229,62 @@ const createDictionaryManager = (
       Object.keys(dictionaryCache).forEach((key) => delete dictionaryCache[key]);
     }
   };
-};
+}
 
-const createSpellChecker = (
+function createSpellChecker(
   dictionaryManager: DictionaryManager = createDictionaryManager(),
   textProcessor: TextProcessor = createTextProcessor(),
   config: SpellCheckerConfig = defaultConfig,
   logger = console
-): SpellChecker => ({
-  async spellCheckHtml(html: string, language: string): Promise<SpellCheckResult> {
-    try {
-      const spell = await dictionaryManager.getDictionary(language);
-      const text = textProcessor.extractTextFromHtml(html);
-      const words = textProcessor.extractWords(text);
-      const misspelled: MisspelledWord[] = [];
+): SpellChecker {
+  return {
+    async spellCheckHtml(html: string, language: string): Promise<SpellCheckResult> {
+      try {
+        const spell = await dictionaryManager.getDictionary(language);
+        const text = textProcessor.extractTextFromHtml(html);
+        const words = textProcessor.extractWords(text);
+        const misspelled: MisspelledWord[] = [];
 
-      words.forEach((rawWord) => {
-        const cleanedWord = textProcessor.cleanWord(rawWord);
+        words.forEach((rawWord) => {
+          const cleanedWord = textProcessor.cleanWord(rawWord);
 
-        if (textProcessor.isWordToSkip(cleanedWord)) {
-          return;
-        }
+          if (textProcessor.isWordToSkip(cleanedWord)) {
+            return;
+          }
 
-        if (!spell.correct(cleanedWord)) {
-          misspelled.push({
-            word: rawWord,
-            cleanedWord, // Include the cleaned version for reference
-            suggestions: spell.suggest(cleanedWord).slice(0, config.MAX_SUGGESTIONS)
-          });
-        }
-      });
+          if (!spell.correct(cleanedWord)) {
+            misspelled.push({
+              word: rawWord,
+              cleanedWord, // Include the cleaned version for reference
+              suggestions: spell.suggest(cleanedWord).slice(0, config.MAX_SUGGESTIONS)
+            });
+          }
+        });
 
-      return {
-        language,
-        misspelledCount: misspelled.length,
-        misspelled,
-        text
-      };
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      logger.error(`Spell check error: ${errorMessage}`);
-      return {
-        language,
-        error: errorMessage,
-        misspelledCount: 0,
-        misspelled: []
-      };
+        return {
+          language,
+          misspelledCount: misspelled.length,
+          misspelled,
+          text
+        };
+      } catch (error) {
+        const errorMessage = getErrorMessage(error);
+        logger.error(`Spell check error: ${errorMessage}`);
+        return {
+          language,
+          error: errorMessage,
+          misspelledCount: 0,
+          misspelled: []
+        };
+      }
     }
-  }
-});
+  };
+}
 
-const createSpellCheckerModule = (options: SpellCheckerModuleOptions = {}) => {
+function createSpellCheckerModule(options: SpellCheckerModuleOptions = {}) {
   const config = { ...defaultConfig, ...options.config };
-  const fileOps = options.fileOps || createFileOperations(config.FILE_ENCODING || ("utf8" as BufferEncoding));
+  const fileOps =
+    options.fileOps || createFileOperations(config.FILE_ENCODING || ("utf8" as BufferEncoding));
   const textProcessor = options.textProcessor || createTextProcessor();
   const dictionaryManager = options.dictionaryManager || createDictionaryManager(fileOps);
   const logger = options.logger || console;
@@ -309,27 +298,6 @@ const createSpellCheckerModule = (options: SpellCheckerModuleOptions = {}) => {
     dictionaryManager,
     clearCache: dictionaryManager.clearCache
   };
-};
+}
 
 export default createSpellCheckerModule();
-
-export const defaultModule = createSpellCheckerModule();
-export const { spellCheckHtml, textProcessor, dictionaryManager, clearCache } = defaultModule;
-
-export {
-  createSpellCheckerModule,
-  createTextProcessor,
-  createDictionaryManager,
-  createSpellChecker
-};
-
-// Re-export types from models.ts for external use
-export type {
-  SpellCheckerConfig,
-  DictionaryManager,
-  TextProcessor,
-  SpellCheckResult,
-  MisspelledWord,
-  SpellInstance,
-  SpellCheckerModuleOptions
-} from "./models.js";

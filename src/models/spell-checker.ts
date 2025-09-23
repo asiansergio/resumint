@@ -1,4 +1,16 @@
-// Essential types for spell checker module only
+export interface FileOperations {
+  readJSON(path: string): any;
+  readFile(path: string): string;
+  writeFile(path: string, content: string): void;
+  exists(path: string): boolean;
+  createDir(path: string): void;
+  deleteFile(path: string): void;
+  readDir(path: string): Promise<string[]>;
+}
+
+export interface AvailableDictionaries {
+  [language: string]: { dic: string; aff: string };
+}
 
 export interface SpellCheckerConfig {
   DICTIONARIES_DIR: string;
