@@ -1,7 +1,7 @@
 import { resolve, join } from "path";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
 import Handlebars from "handlebars";
-import { launch } from "puppeteer";
+import { Browser, launch } from "puppeteer";
 import spellChecker from "./spell-checker.js";
 import { ResumeData, CommandLineArgs, GenerationResult } from "./models/generator.js";
 import { getCurrentDate, getErrorMessage, Timer } from "./utils.js";
@@ -35,11 +35,11 @@ function setupHandlebars(): void {
 }
 
 async function generatePDF(
+  browser: Browser,
   htmlPath: string,
   outputPath: string,
   generationResult: GenerationResult
 ) {
-  const browser = await launch();
   const page = await browser.newPage();
 
   const absoluteHtmlPath = `file://${resolve(htmlPath)}`;
@@ -89,6 +89,7 @@ async function spellCheckHTML(html: string, language: string, generationResult: 
 }
 
 async function generateResumeForLanguage(
+  browser: Browser,
   currentDate: string,
   template: HandlebarsTemplateDelegate<any>,
   resumeData: ResumeData,
@@ -121,7 +122,7 @@ async function generateResumeForLanguage(
     result.logs.push(`[Info]: HTML saved: ${htmlPath}\n`);
   } else {
     const pdfPath = join(outputDir, `${baseFileName}.pdf`);
-    pdfGenerationPromise = generatePDF(htmlPath, pdfPath, result);
+    pdfGenerationPromise = generatePDF(browser, htmlPath, pdfPath, result);
   }
 
   if (!argv.html && !argv.htmlOnly) {
@@ -141,6 +142,7 @@ async function generateResumeForLanguage(
 
 export async function generateResumes(argv: CommandLineArgs) {
   try {
+    const browserLaunchPromise = launch();
     setupHandlebars();
 
     const resumeData: ResumeData = JSON.parse(readFileSync(argv.data, "utf8"));
@@ -167,10 +169,12 @@ export async function generateResumes(argv: CommandLineArgs) {
     const currentDate = getCurrentDate();
     const templateSource = readFileSync(templatePath, "utf8");
     const template = Handlebars.compile(templateSource);
+    const browser = await browserLaunchPromise;
 
     await Promise.all(
       languages.map((language) =>
         generateResumeForLanguage(
+          browser,
           currentDate,
           template,
           resumeData,
@@ -181,6 +185,8 @@ export async function generateResumes(argv: CommandLineArgs) {
         )
       )
     );
+
+    await browser.close();
   } catch (err) {
     console.error(`Error: ${getErrorMessage(err)}`);
     process.exit(1);
