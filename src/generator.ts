@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "
 import Handlebars from "handlebars";
 import { launch } from "puppeteer";
 import spellChecker from "./spell-checker.js";
-import { ResumeData, CommandLineArgs } from "./models/generator.js";
+import { ResumeData, CommandLineArgs, GenerationResult } from "./models/generator.js";
 import { getCurrentDate, getErrorMessage, Timer } from "./utils.js";
 
 const A4_HEIGHT_PX = 1123;
@@ -34,14 +34,11 @@ function setupHandlebars(): void {
   });
 }
 
-function generateHTML(data: ResumeData, language: string, templatePath: string): string {
-  const templateSource = readFileSync(templatePath, "utf8");
-  const template = Handlebars.compile(templateSource);
-  return template({ ...data, language });
-}
-
-// PDF Generation
-async function generatePDF(htmlPath: string, outputPath: string): Promise<void> {
+async function generatePDF(
+  htmlPath: string,
+  outputPath: string,
+  generationResult: GenerationResult
+) {
   const browser = await launch();
   const page = await browser.newPage();
 
@@ -52,15 +49,16 @@ async function generatePDF(htmlPath: string, outputPath: string): Promise<void> 
   const contentHeight = await page.evaluate(() => {
     const container = document.querySelector(".resume-container");
     if (!container) {
-      console.warn("Resume container not found, using body height");
+      generationResult.logs.push("[Warrn]: Resume container not found, using body height");
       return document.body.scrollHeight;
     }
     return container.scrollHeight;
   });
 
   if (contentHeight > A4_HEIGHT_PX) {
-    console.log(`Content height (${contentHeight}px) exceeds A4 maximum (${A4_HEIGHT_PX}px)`);
-    console.error("Content height exceeds A4 threshold. PDF generation aborted.");
+    generationResult.logs.push(
+      `[Error]: Content height (${contentHeight}px) exceeds A4 maximum (${A4_HEIGHT_PX}px)`
+    );
     await browser.close();
     return;
   }
@@ -72,63 +70,80 @@ async function generatePDF(htmlPath: string, outputPath: string): Promise<void> 
   });
 
   await browser.close();
-  console.log(`PDF generated: ${outputPath}`);
+  generationResult.logs.push(`[Info]: PDF generated: ${outputPath}`);
 }
 
-async function spellCheckHTML(html: string, language: string): Promise<void> {
+async function spellCheckHTML(html: string, language: string, generationResult: GenerationResult) {
   const result = await spellChecker.spellCheckHtml(html, language);
 
   if (result.misspelledCount > 0) {
-    console.warn(`Found ${result.misspelledCount} misspelled words in '${language}' resume:`);
+    generationResult.logs.push(
+      `[Warn]: Found ${result.misspelledCount} misspelled words in '${language}' resume:`
+    );
     result.misspelled.forEach(({ word, suggestions }) => {
-      console.warn(`- "${word}" -> Suggestions: ${suggestions.join(", ")}`);
+      generationResult.logs.push(`\t- "${word}" -> Suggestions: ${suggestions.join(", ")}`);
     });
   } else {
-    console.log(`✓ No spelling errors found in ${language} resume`);
+    generationResult.logs.push(`[Info]: No spelling errors found in ${language} resume`);
   }
 }
 
 async function generateResumeForLanguage(
+  currentDate: string,
+  template: HandlebarsTemplateDelegate<any>,
   resumeData: ResumeData,
   templatePath: string,
   outputDir: string,
   argv: CommandLineArgs,
   language: string
 ) {
-  const currentDate = getCurrentDate();
+  const result: GenerationResult = {
+    logs: [`\nResume lang '${language.toUpperCase()}'`]
+  };
+
   const baseFileName = `${currentDate}-${language}-${resumeData.basic.name
     .toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "")}`;
 
-  const html = generateHTML(resumeData, language, templatePath);
+  const html = template({ ...resumeData, language });
   const htmlPath = join(outputDir, `${baseFileName}.html`);
 
+  let spellCheckPromise;
   if (!argv.noSpellCheck) {
-    await spellCheckHTML(html, language);
+    spellCheckPromise = spellCheckHTML(html, language, result);
   }
 
   writeFileSync(htmlPath, html);
-  console.log(`HTML saved: ${htmlPath}`);
 
-  if (!argv.htmlOnly) {
+  let pdfGenerationPromise;
+  if (argv.htmlOnly) {
+    result.logs.push(`[Info]: HTML saved: ${htmlPath}\n`);
+  } else {
     const pdfPath = join(outputDir, `${baseFileName}.pdf`);
-    await generatePDF(htmlPath, pdfPath);
+    pdfGenerationPromise = generatePDF(htmlPath, pdfPath, result);
   }
 
   if (!argv.html && !argv.htmlOnly) {
     unlinkSync(htmlPath);
   }
+
+  if (spellCheckPromise) {
+    await spellCheckPromise;
+  }
+
+  if (pdfGenerationPromise) {
+    await pdfGenerationPromise;
+  }
+
+  console.log(result.logs.join("\n"));
 }
 
 export async function generateResumes(argv: CommandLineArgs) {
   try {
     setupHandlebars();
 
-    const timer = new Timer();
-    timer.start();
     const resumeData: ResumeData = JSON.parse(readFileSync(argv.data, "utf8"));
-    timer.stop("template reading");
     const templateName = argv.template || resumeData.metadata?.template || "default";
     const templatePath = resolve(process.cwd(), argv.templatesDir, `${templateName}-template.html`);
 
@@ -149,14 +164,23 @@ export async function generateResumes(argv: CommandLineArgs) {
       process.exit(1);
     }
 
-    // Generate resumes for all languages
+    const currentDate = getCurrentDate();
+    const templateSource = readFileSync(templatePath, "utf8");
+    const template = Handlebars.compile(templateSource);
+
     await Promise.all(
       languages.map((language) =>
-        generateResumeForLanguage(resumeData, templatePath, outputDir, argv, language)
+        generateResumeForLanguage(
+          currentDate,
+          template,
+          resumeData,
+          templatePath,
+          outputDir,
+          argv,
+          language
+        )
       )
     );
-
-    console.log("\nResume generation completed successfully");
   } catch (err) {
     console.error(`Error: ${getErrorMessage(err)}`);
     process.exit(1);

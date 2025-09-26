@@ -16,3 +16,7 @@ export interface CommandLineArgs {
   noSpellCheck?: boolean;
   [key: string]: any;
 }
+
+export interface GenerationResult {
+  logs: string[];
+}

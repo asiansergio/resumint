@@ -1,0 +1,21 @@
+## Performance improvement
+1. Load the data file once, extract the per language data into some data structure
+2. Parse each language into html
+3. Create all html files async
+4. While waiting for the html files, start the spell checking for each language async
+5. Whenever an html file writing is done start with its pdf. Reuse the open browser for next pdfs
+
+Store the html and pdf creation into a result data structure per language
+Store the spell checking output into it as well
+Make a single console.log output at the end
+
+## Refactoring
+- Extract interfaces into a models dir
+- Review exports and imports
+- Extract utilities
+- Look for further simplifying current implementation
+- Consider changing packages:
+    - puppeteer for wkhtmltopdf
+    - handlebars for mustache
+    - yargs for native process.argv
+    - nspell for hunspell-asm
