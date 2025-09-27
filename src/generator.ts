@@ -40,9 +40,8 @@ async function generatePDF(
   outputPath: string,
   generationResult: GenerationResult
 ) {
-  const page = await browser.newPage();
-
   const absoluteHtmlPath = `file://${resolve(htmlPath)}`;
+  const page = await browser.newPage();
   await page.goto(absoluteHtmlPath, { waitUntil: "networkidle0" });
 
   // Validate height
@@ -59,7 +58,6 @@ async function generatePDF(
     generationResult.logs.push(
       `[Error]: Content height (${contentHeight}px) exceeds A4 maximum (${A4_HEIGHT_PX}px)`
     );
-    await browser.close();
     return;
   }
 
@@ -69,7 +67,6 @@ async function generatePDF(
     margin: { top: "0", right: "0", bottom: "0", left: "0" }
   });
 
-  await browser.close();
   generationResult.logs.push(`[Info]: PDF generated: ${outputPath}`);
 }
 
@@ -90,43 +87,24 @@ async function spellCheckHTML(html: string, language: string, generationResult: 
 
 async function generateResumeForLanguage(
   browser: Browser,
-  currentDate: string,
-  template: HandlebarsTemplateDelegate<any>,
-  resumeData: ResumeData,
-  templatePath: string,
-  outputDir: string,
   argv: CommandLineArgs,
-  language: string
+  result: GenerationResult
 ) {
-  const result: GenerationResult = {
-    logs: [`\nResume lang '${language.toUpperCase()}'`]
-  };
-
-  const baseFileName = `${currentDate}-${language}-${resumeData.basic.name
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")}`;
-
-  const html = template({ ...resumeData, language });
-  const htmlPath = join(outputDir, `${baseFileName}.html`);
+  const htmlPath = join(result.outputDir, `${result.baseFileName}.html`);
 
   let spellCheckPromise;
   if (!argv.noSpellCheck) {
-    spellCheckPromise = spellCheckHTML(html, language, result);
+    spellCheckPromise = spellCheckHTML(result.html, result.language, result);
   }
 
-  writeFileSync(htmlPath, html);
+  writeFileSync(htmlPath, result.html);
 
   let pdfGenerationPromise;
   if (argv.htmlOnly) {
     result.logs.push(`[Info]: HTML saved: ${htmlPath}\n`);
   } else {
-    const pdfPath = join(outputDir, `${baseFileName}.pdf`);
+    const pdfPath = join(result.outputDir, `${result.baseFileName}.pdf`);
     pdfGenerationPromise = generatePDF(browser, htmlPath, pdfPath, result);
-  }
-
-  if (!argv.html && !argv.htmlOnly) {
-    unlinkSync(htmlPath);
   }
 
   if (spellCheckPromise) {
@@ -135,6 +113,10 @@ async function generateResumeForLanguage(
 
   if (pdfGenerationPromise) {
     await pdfGenerationPromise;
+  }
+
+  if (!argv.html && !argv.htmlOnly) {
+    unlinkSync(htmlPath);
   }
 
   console.log(result.logs.join("\n"));
@@ -172,18 +154,22 @@ export async function generateResumes(argv: CommandLineArgs) {
     const browser = await browserLaunchPromise;
 
     await Promise.all(
-      languages.map((language) =>
-        generateResumeForLanguage(
-          browser,
-          currentDate,
-          template,
-          resumeData,
-          templatePath,
-          outputDir,
-          argv,
-          language
-        )
-      )
+      languages.map((language) => {
+        const generationResult: GenerationResult = {
+          language: language,
+          templateName: templateName,
+          templatePath: templatePath,
+          outputDir: outputDir,
+          baseFileName: `${currentDate}-${language}-${resumeData.basic.name
+            .toLowerCase()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-]/g, "")}`,
+          html: template({ ...resumeData, language }),
+          logs: [`\nResume lang '${language.toUpperCase()}'`]
+        };
+
+        return generateResumeForLanguage(browser, argv, generationResult);
+      })
     );
 
     await browser.close();

@@ -13,8 +13,8 @@
     "demo": "node ./dist/main.js --data ./data/example-data.json --html",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prettier": "prettier --check .",
-    "prettier:fix": "prettier --write ."
+    "format": "prettier --check .",
+    "format:fix": "prettier --write ."
   },
   "keywords": [
     "resume",
@@ -33,8 +33,8 @@
     "yargs": "17.7.2"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "8.44.0",
-    "@typescript-eslint/parser": "8.44.0",
+    "@typescript-eslint/eslint-plugin": "6.21.0",
+    "@typescript-eslint/parser": "6.21.0",
     "eslint": "8.44.0",
     "eslint-config-prettier": "10.1.5",
     "prettier": "3.0.3",

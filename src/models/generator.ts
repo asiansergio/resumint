@@ -18,5 +18,11 @@ export interface CommandLineArgs {
 }
 
 export interface GenerationResult {
+  language: string;
+  templateName: string;
+  templatePath: string;
+  outputDir: string;
+  baseFileName: string;
+  html: string;
   logs: string[];
 }
