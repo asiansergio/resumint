@@ -1,7 +1,7 @@
 import { resolve, join } from "path";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
 import Handlebars from "handlebars";
-import { Browser, launch } from "puppeteer";
+import { Browser, launch, Page } from "puppeteer";
 import spellChecker from "./spell-checker.js";
 import {
   ResumeData,
@@ -63,13 +63,12 @@ function setupHandlebars(): void {
 }
 
 async function generatePDF(
-  browser: Browser,
+  page: Page,
   htmlPath: string,
   outputPath: string,
   generationResult: GenerationResult
 ) {
   const absoluteHtmlPath = `file://${resolve(htmlPath)}`;
-  const page = await browser.newPage();
   await page.goto(absoluteHtmlPath, { waitUntil: "networkidle0" });
 
   // Validate height
@@ -126,6 +125,11 @@ async function generateResumeForLanguage(
   options: CommandLineArgs,
   generationResult: GenerationResult
 ) {
+  let newPagePromise;
+  if (!options.htmlOnly) {
+    newPagePromise = browser.newPage();
+  }
+
   const htmlPath = join(generationResult.outputDir, `${generationResult.baseFileName}.html`);
 
   let spellCheckPromise;
@@ -144,7 +148,12 @@ async function generateResumeForLanguage(
     generationResult.logs.push(createLogEntry("info", `HTML saved: ${htmlPath}`));
   } else {
     const pdfPath = join(generationResult.outputDir, `${generationResult.baseFileName}.pdf`);
-    pdfGenerationPromise = generatePDF(browser, htmlPath, pdfPath, generationResult);
+    const page = await newPagePromise;
+    if (!page) {
+      handleGenerationError(generationResult, "Browser page was not created");
+      return;
+    }
+    pdfGenerationPromise = generatePDF(page, htmlPath, pdfPath, generationResult);
   }
 
   if (spellCheckPromise) {
@@ -164,7 +173,10 @@ async function generateResumeForLanguage(
 
 export async function generateResumes(options: CommandLineArgs) {
   try {
-    const browserLaunchPromise = launch();
+    const browserLaunchPromise = launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+    });
     setupHandlebars();
 
     const resumeData: ResumeData = JSON.parse(readFileSync(options.data, "utf8"));
