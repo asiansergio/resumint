@@ -17,12 +17,27 @@ export interface CommandLineArgs {
   [key: string]: any;
 }
 
+export type LogLevel = "info" | "warn" | "error";
+
+export interface LogEntry {
+  level: LogLevel;
+  message: string;
+  timestamp: Date;
+}
+
 export interface GenerationResult {
   language: string;
   templateName: string;
-  templatePath: string;
   outputDir: string;
   baseFileName: string;
   html: string;
-  logs: string[];
+  logs: LogEntry[];
+  errors: string[];
+  success: boolean;
+  metadata: {
+    generationTime?: Date;
+    htmlFileSize?: number;
+    pdfFileSize?: number;
+    spellCheckEnabled: boolean;
+  };
 }
